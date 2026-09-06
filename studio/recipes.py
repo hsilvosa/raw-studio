@@ -32,7 +32,7 @@ class Adjustment(BaseModel):
     @classmethod
     def finite(cls, params):
         if not params or any(not math.isfinite(v) for v in params.values()):
-            raise ValueError('Se requieren parámetros numéricos finitos')
+            raise ValueError('Finite numerical parameters required')
         return params
 
 
@@ -47,12 +47,12 @@ def validate_proposal(value):
     seen = set()
     for adjustment in proposal.adjustments:
         if adjustment.operation in seen or adjustment.operation not in LIMITS:
-            raise ValueError('Módulo duplicado o no permitido')
+            raise ValueError('Duplicate or disallowed module')
         seen.add(adjustment.operation)
         for key, value in adjustment.params.items():
             bounds = LIMITS[adjustment.operation].get(key)
             if not bounds or not bounds[0] <= value <= bounds[1]:
-                raise ValueError(f'Ajuste fuera de límites: {adjustment.operation}.{key}')
+                raise ValueError(f'Adjustment out of bounds: {adjustment.operation}.{key}')
     return proposal
 
 
@@ -64,7 +64,7 @@ def merge(stack, proposal):
             module = {'operation': adjustment.operation, 'params': {}}
             result.append(module)
         if 'blob_hex' in module:
-            raise ValueError('El modelo no puede modificar parámetros binarios')
+            raise ValueError('Model cannot modify binary parameters')
         module.setdefault('params', {}).update(adjustment.params)
     return result
 

@@ -1,10 +1,15 @@
 import hashlib
+import io
 import json
 import shutil
 import sqlite3
+import subprocess
 from pathlib import Path
-from PIL import Image
-from .settings import STATE, PHOTO_ROOT, RAW_EXTENSIONS
+from PIL import Image, ImageOps
+from .settings import (
+    STATE, PHOTO_ROOT, RAW_EXTENSIONS, CAMERA_RAW_EXTENSIONS,
+    DEFAULT_PHOTO_ROOT, DARKTABLE, save_config
+)
 
 
 def connect():
@@ -15,11 +20,98 @@ def connect():
     return conn
 
 
+def set_photo_root(path):
+    global PHOTO_ROOT
+    p = Path(path).resolve()
+    if not p.is_dir():
+        raise ValueError('Photo folder not found')
+    if p.is_relative_to(STATE):
+        raise ValueError('Cannot select state folder as photos folder')
+    PHOTO_ROOT = p
+    return PHOTO_ROOT
+
+
 def inside(path):
     value = Path(path).resolve()
-    if not value.is_relative_to(PHOTO_ROOT) or value.is_relative_to(STATE):
-        raise ValueError('Selecciona un archivo dentro de la carpeta de fotos')
+    if value.is_relative_to(STATE):
+        raise ValueError('Please select a file inside the photos folder')
+    if PHOTO_ROOT is not None and not value.is_relative_to(PHOTO_ROOT):
+        raise ValueError('Please select a file inside the photos folder')
     return value
+
+
+def get_browser_thumbnail(path_str: str) -> Path:
+    target = Path(path_str).resolve()
+    if not target.is_file():
+        raise ValueError('File not found')
+    if target.is_relative_to(STATE):
+        raise ValueError('Cannot preview files in state folder')
+    ext = target.suffix.lower()
+    if ext not in RAW_EXTENSIONS and ext not in CAMERA_RAW_EXTENSIONS:
+        raise ValueError('Unsupported file format for preview')
+
+    cache_dir = STATE / 'cache' / 'browser_thumbs'
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    mtime = target.stat().st_mtime
+    key = hashlib.md5(f'{target}:{mtime}'.encode('utf-8')).hexdigest()
+    out_file = cache_dir / f'{key}.jpg'
+    if out_file.exists():
+        return out_file
+
+    # 1. Standard image formats: open with PIL
+    if ext in {'.jpg', '.jpeg', '.png', '.webp', '.tif', '.tiff'}:
+        try:
+            with Image.open(target) as im:
+                im = ImageOps.exif_transpose(im)
+                im.thumbnail((240, 240))
+                im.convert('RGB').save(out_file, 'JPEG', quality=85)
+            return out_file
+        except Exception:
+            pass
+
+    # 2. Camera RAW: extract embedded JPEG preview
+    try:
+        with open(target, 'rb') as f:
+            data = f.read(8 * 1024 * 1024)
+        best_im = None
+        best_area = 0
+        idx = 0
+        while True:
+            pos = data.find(b'\xff\xd8\xff', idx)
+            if pos == -1:
+                break
+            end = data.find(b'\xff\xd9', pos)
+            if end != -1 and (end - pos) > 5000:
+                try:
+                    seg = data[pos:end + 2]
+                    im = Image.open(io.BytesIO(seg))
+                    area = im.width * im.height
+                    if area > best_area:
+                        best_area = area
+                        best_im = im
+                except Exception:
+                    pass
+            idx = pos + 3
+
+        if best_im is not None:
+            best_im = ImageOps.exif_transpose(best_im)
+            best_im.thumbnail((240, 240))
+            best_im.convert('RGB').save(out_file, 'JPEG', quality=85)
+            return out_file
+    except Exception:
+        pass
+
+    # 3. Fallback to darktable-mcp
+    try:
+        cmd = [str(DARKTABLE), 'export', str(target), str(out_file), '--width', '240', '--height', '240']
+        subprocess.run(cmd, capture_output=True, timeout=12)
+        if out_file.exists():
+            return out_file
+    except Exception:
+        pass
+
+    raise RuntimeError('Could not extract thumbnail for image')
+
 
 
 def digest(path):
@@ -33,7 +125,7 @@ def digest(path):
 def add(path):
     source = inside(path)
     if not source.is_file() or source.suffix.lower() not in RAW_EXTENSIONS:
-        raise ValueError('Formato de imagen no admitido')
+        raise ValueError('Unsupported image format')
     checksum = digest(source)
     identifier = checksum[:20]
     target = STATE / 'originals' / (identifier + source.suffix.lower())
@@ -43,7 +135,7 @@ def add(path):
         shutil.copyfile(source, temporary)
         if digest(temporary) != checksum:
             temporary.unlink()
-            raise RuntimeError('Falló la verificación de la copia')
+            raise RuntimeError('Copy verification failed')
         temporary.replace(target)
     with connect() as conn:
         conn.execute('INSERT OR IGNORE INTO images VALUES (?,?,?,?,?)', (identifier, source.name, str(source), str(target), checksum))
@@ -54,13 +146,73 @@ def get(identifier):
     with connect() as conn:
         row = conn.execute('SELECT * FROM images WHERE id=?', (identifier,)).fetchone()
     if row is None:
-        raise ValueError('Imagen no encontrada')
-    return dict(row)
+        raise ValueError('Image not found')
+    data = dict(row)
+    copy_path = Path(data['copy'])
+    if not copy_path.exists():
+        relocated = STATE / 'originals' / copy_path.name
+        if relocated.exists():
+            data['copy'] = str(relocated)
+            with connect() as conn:
+                conn.execute('UPDATE images SET copy=? WHERE id=?', (str(relocated), identifier))
+    return data
 
 
 def all_images():
     with connect() as conn:
-        return [dict(row) for row in conn.execute('SELECT * FROM images ORDER BY name')]
+        rows = [dict(row) for row in conn.execute('SELECT * FROM images ORDER BY name')]
+    for data in rows:
+        copy_path = Path(data['copy'])
+        if not copy_path.exists():
+            relocated = STATE / 'originals' / copy_path.name
+            if relocated.exists():
+                data['copy'] = str(relocated)
+                with connect() as conn:
+                    conn.execute('UPDATE images SET copy=? WHERE id=?', (str(relocated), data['id']))
+    return rows
+
+
+def delete_images(identifiers):
+    if isinstance(identifiers, str):
+        identifiers = [identifiers]
+    deleted = []
+    with connect() as conn:
+        for identifier in identifiers:
+            row = conn.execute('SELECT * FROM images WHERE id=?', (identifier,)).fetchone()
+            if row:
+                data = dict(row)
+                # 1. Delete working copy in .studio/originals (preserves original source on disk)
+                copy_path = Path(data['copy'])
+                if copy_path.is_file() and copy_path.is_relative_to(STATE):
+                    try:
+                        copy_path.unlink()
+                    except Exception:
+                        pass
+                # 2. Delete base preview in .studio/previews
+                preview_path = STATE / 'previews' / (identifier + '.png')
+                if preview_path.is_file():
+                    try:
+                        preview_path.unlink()
+                    except Exception:
+                        pass
+                # 3. Delete developed renders for this image
+                renders_dir = STATE / 'renders'
+                if renders_dir.is_dir():
+                    for r_dir in renders_dir.iterdir():
+                        if r_dir.is_dir():
+                            r_recipe = r_dir / 'recipe.json'
+                            if r_recipe.is_file():
+                                try:
+                                    rec = json.loads(r_recipe.read_text(encoding='utf-8'))
+                                    if rec.get('image_id') == identifier:
+                                        shutil.rmtree(r_dir, ignore_errors=True)
+                                except Exception:
+                                    pass
+                # 4. Remove database record
+                conn.execute('DELETE FROM images WHERE id=?', (identifier,))
+                deleted.append(identifier)
+    return deleted
+
 
 
 def measure(path):
