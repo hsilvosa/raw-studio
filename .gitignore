@@ -1,0 +1,13 @@
+/*
+!/.gitignore
+!/README.md
+!/requirements.txt
+!/run.ps1
+!/studio/
+!/tests/
+!/scripts/
+!/profiles/
+!/docs/
+**/__pycache__/
+**/.pytest_cache/
+*.pyc

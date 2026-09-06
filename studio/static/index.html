@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Revelado local</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div><span class="mark">R</span><strong>Revelado <span>local</span></strong></div><div id="connection">Comprobando motores…</div><button id="import">Importar fotos</button></header>
+<main>
+<aside class="library"><div class="section-title">BIBLIOTECA <span id="count">0</span></div><div id="images"></div><p class="hint">Tus originales se conservan. Cada revelado utiliza una copia verificada.</p></aside>
+<section class="workspace"><div class="toolbar"><div><span class="eyebrow">MESA DE EDICIÓN</span><h1 id="filename">Selecciona una fotografía</h1></div><div class="segmented"><button id="fit" class="active">Ajustar</button><button id="zoom">100 %</button></div></div>
+<div class="viewer" id="viewer"><div class="empty" id="empty"><h2>Una foto. Distintas miradas.</h2><p>Importa un RAW y compara los perfiles sobre tu imagen.</p></div><div id="pair" hidden><figure><figcaption>REVELADO BASE</figcaption><img id="before" alt="Revelado base"></figure><figure><figcaption id="after-label">PERFIL</figcaption><img id="after" alt="Resultado del perfil"></figure></div></div>
+<div class="status" role="status" aria-live="polite" id="status">Listo para importar</div><div id="results" class="results"></div>
+</section>
+<aside class="controls"><div class="section-title">TU EDICIÓN</div><label for="profile">Perfil de color</label><select id="profile"></select><p class="hint" id="profile-description"></p>
+<label for="intensity">Intensidad <output id="intensity-value">80 %</output></label><input id="intensity" type="range" min="0" max="100" value="80">
+<label for="exposure">Compensación de exposición <output id="exposure-value">0 EV</output></label><input id="exposure" type="range" min="-2" max="2" step="0.1" value="0">
+<label class="check"><input id="adapt" type="checkbox" checked> Adaptar luminosidad</label><hr>
+<label class="check"><input id="model" type="checkbox"> Adaptar con modelo local</label><p class="hint">El modelo analiza la imagen y propone ajustes. Darktable realiza el revelado.</p><label for="intent">Dirección de edición</label><textarea id="intent" rows="4" placeholder="Por ejemplo: conserva los blancos y enfría ligeramente las sombras."></textarea>
+<button class="primary" id="develop" disabled>Revelar perfil</button><button id="all" disabled>Comparar los 8 perfiles</button><button id="export" disabled>Exportar selección</button><details><summary>Decisiones y receta</summary><p id="reason">Las decisiones aparecerán después del revelado.</p><pre id="recipe"></pre></details>
+</aside></main>
+<dialog id="browser"><div class="dialog-head"><h2>Importar desde tu carpeta</h2><button id="close-browser">Cerrar</button></div><p id="folder"></p><button id="parent">Subir carpeta</button><div id="files"></div><div class="dialog-foot"><span id="selected-count">0 seleccionadas</span><button class="primary" id="confirm-import">Importar selección</button></div></dialog>
+<script src="/app.js"></script></body></html>

@@ -1,0 +1,380 @@
+[
+  {
+    "id": "01_CINEMATICO",
+    "title": "CinematogrÃ¡fico contenido",
+    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.43,
+          "contrast_skewness": -0.05,
+          "display_black_target": 0.03
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.045,
+          "shadows_C": 0.01,
+          "shadows_H": 240,
+          "highlights_C": 0.003,
+          "highlights_H": 65,
+          "midtones_C": 0.008,
+          "midtones_H": 55,
+          "contrast": 0.035,
+          "chroma_global": 0.08,
+          "saturation_shadows": -0.12,
+          "saturation_highlights": -0.12,
+          "vibrance": 0.1
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_green": 0.86,
+          "sat_yellow": 0.86,
+          "hue_green": 12,
+          "hue_yellow": 5,
+          "bright_green": 0.99,
+          "sat_cyan": 0.85,
+          "sat_blue": 0.72,
+          "bright_orange": 1.07,
+          "sat_orange": 1.06
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.22,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "02_JADE_FRIO",
+    "title": "Jade frÃ­o",
+    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.48,
+          "display_black_target": 0.035
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.05,
+          "global_C": 0.003,
+          "global_H": 240,
+          "shadows_C": 0.012,
+          "shadows_H": 230,
+          "highlights_C": 0.001,
+          "highlights_H": 65,
+          "chroma_global": 0.06,
+          "saturation_global": -0.08,
+          "contrast": 0.035
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "hue_green": 22,
+          "hue_yellow": 12,
+          "sat_green": 1.08,
+          "sat_yellow": 0.6,
+          "sat_orange": 0.95,
+          "sat_blue": 0.78,
+          "bright_green": 0.98
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.22,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "03_CALIDO_FOCO",
+    "title": "CÃ¡lido mate",
+    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.32,
+          "display_black_target": 0.32
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.04,
+          "global_C": 0.002,
+          "global_H": 55,
+          "midtones_C": 0.012,
+          "midtones_H": 60,
+          "highlights_C": 0.005,
+          "highlights_H": 65,
+          "saturation_global": -0.13,
+          "saturation_shadows": -0.18,
+          "contrast": -0.015
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_green": 0.72,
+          "sat_yellow": 0.9,
+          "hue_green": -10,
+          "hue_yellow": -5,
+          "sat_orange": 1.1
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.08,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "04_NEON",
+    "title": "NeÃ³n azul-violeta",
+    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.48,
+          "display_black_target": 0.035
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.055,
+          "global_C": 0.004,
+          "global_H": 275,
+          "shadows_C": 0.017,
+          "shadows_H": 265,
+          "highlights_C": 0.002,
+          "highlights_H": 35,
+          "saturation_global": 0.015,
+          "saturation_shadows": -0.1,
+          "contrast": 0.015
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_yellow": 0.42,
+          "sat_green": 0.45,
+          "sat_blue": 1.4,
+          "sat_cyan": 1.22,
+          "sat_red": 1.2,
+          "sat_magenta": 1.28,
+          "hue_blue": 12,
+          "hue_cyan": 8,
+          "sat_orange": 0.85
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.14,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "05_NOIR",
+    "title": "Blanco y negro grÃ¡fico",
+    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.65,
+          "display_black_target": 0.07
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.045,
+          "contrast": 0.045
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_yellow": 1,
+          "sat_green": 1
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.26,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      },
+      {
+        "operation": "monochrome",
+        "params": {
+          "a": 0,
+          "b": 0,
+          "size": 2,
+          "highlights": 0.25
+        }
+      }
+    ]
+  },
+  {
+    "id": "06_EDITORIAL",
+    "title": "Editorial natural",
+    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.5,
+          "display_black_target": 0.015
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.055,
+          "chroma_global": 0.1,
+          "vibrance": 0.14,
+          "contrast": 0.02
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_green": 0.95,
+          "sat_yellow": 0.92,
+          "sat_blue": 1.05,
+          "bright_orange": 1.04
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.26,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "07_PASTEL",
+    "title": "Pastel suave",
+    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.2,
+          "display_black_target": 0.48
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.065,
+          "global_C": 0.0015,
+          "global_H": 320,
+          "midtones_C": 0.004,
+          "midtones_H": 55,
+          "saturation_global": -0.24,
+          "contrast": -0.04
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_green": 0.7,
+          "sat_yellow": 0.72,
+          "sat_blue": 0.8,
+          "sat_magenta": 0.9
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.03,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "08_CONTRASTE_DESATURADO",
+    "title": "Contraste desaturado",
+    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.65,
+          "display_black_target": 0.025
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.045,
+          "saturation_global": -0.48,
+          "chroma_global": -0.12,
+          "contrast": 0.045,
+          "shadows_C": 0.003,
+          "shadows_H": 240
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_green": 0.8,
+          "sat_yellow": 0.6,
+          "sat_red": 0.95
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.32,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  }
+]
