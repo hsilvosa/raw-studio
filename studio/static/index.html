@@ -1,19 +1,199 @@
 <!doctype html>
-<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Revelado local</title><link rel="stylesheet" href="/style.css"></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Raw Studio - Local RAW Development</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
 <body>
-<header><div><span class="mark">R</span><strong>Revelado <span>local</span></strong></div><div id="connection">Comprobando motores…</div><button id="import">Importar fotos</button></header>
-<main>
-<aside class="library"><div class="section-title">BIBLIOTECA <span id="count">0</span></div><div id="images"></div><p class="hint">Tus originales se conservan. Cada revelado utiliza una copia verificada.</p></aside>
-<section class="workspace"><div class="toolbar"><div><span class="eyebrow">MESA DE EDICIÓN</span><h1 id="filename">Selecciona una fotografía</h1></div><div class="segmented"><button id="fit" class="active">Ajustar</button><button id="zoom">100 %</button></div></div>
-<div class="viewer" id="viewer"><div class="empty" id="empty"><h2>Una foto. Distintas miradas.</h2><p>Importa un RAW y compara los perfiles sobre tu imagen.</p></div><div id="pair" hidden><figure><figcaption>REVELADO BASE</figcaption><img id="before" alt="Revelado base"></figure><figure><figcaption id="after-label">PERFIL</figcaption><img id="after" alt="Resultado del perfil"></figure></div></div>
-<div class="status" role="status" aria-live="polite" id="status">Listo para importar</div><div id="results" class="results"></div>
-</section>
-<aside class="controls"><div class="section-title">TU EDICIÓN</div><label for="profile">Perfil de color</label><select id="profile"></select><p class="hint" id="profile-description"></p>
-<label for="intensity">Intensidad <output id="intensity-value">80 %</output></label><input id="intensity" type="range" min="0" max="100" value="80">
-<label for="exposure">Compensación de exposición <output id="exposure-value">0 EV</output></label><input id="exposure" type="range" min="-2" max="2" step="0.1" value="0">
-<label class="check"><input id="adapt" type="checkbox" checked> Adaptar luminosidad</label><hr>
-<label class="check"><input id="model" type="checkbox"> Adaptar con modelo local</label><p class="hint">El modelo analiza la imagen y propone ajustes. Darktable realiza el revelado.</p><label for="intent">Dirección de edición</label><textarea id="intent" rows="4" placeholder="Por ejemplo: conserva los blancos y enfría ligeramente las sombras."></textarea>
-<button class="primary" id="develop" disabled>Revelar perfil</button><button id="all" disabled>Comparar los 8 perfiles</button><button id="export" disabled>Exportar selección</button><details><summary>Decisiones y receta</summary><p id="reason">Las decisiones aparecerán después del revelado.</p><pre id="recipe"></pre></details>
-</aside></main>
-<dialog id="browser"><div class="dialog-head"><h2>Importar desde tu carpeta</h2><button id="close-browser">Cerrar</button></div><p id="folder"></p><button id="parent">Subir carpeta</button><div id="files"></div><div class="dialog-foot"><span id="selected-count">0 seleccionadas</span><button class="primary" id="confirm-import">Importar selección</button></div></dialog>
-<script src="/app.js"></script></body></html>
+  <header>
+    <div><span class="mark">R</span><strong>Raw <span>Studio</span></strong></div>
+    <div id="connection">Checking engines…</div>
+    <button id="import">Import photos</button>
+  </header>
+  <main id="main">
+    <aside class="library" id="library">
+      <div class="library-header">
+        <div class="section-title">LIBRARY <span id="count">0</span></div>
+        <div class="library-header-actions">
+          <button type="button" id="lib-select-mode" class="btn-subtle" title="Select multiple photos to delete">Select</button>
+          <button type="button" id="toggle-library" class="btn-subtle" title="Toggle expanded grid view">⛶ Expand</button>
+        </div>
+      </div>
+      <div class="library-selection-bar" id="library-selection-bar" hidden>
+        <div class="library-selection-actions">
+          <button type="button" id="lib-select-all" class="btn-mini">All</button>
+          <button type="button" id="lib-select-none" class="btn-mini">Clear</button>
+          <button type="button" id="lib-cancel" class="btn-mini">Cancel</button>
+        </div>
+        <button type="button" id="lib-delete-btn" class="btn-mini btn-danger" disabled>Delete (0)</button>
+      </div>
+      <div id="images" class="images-container"></div>
+      <p class="hint">Your originals are preserved. Each develop run uses a verified copy.</p>
+
+    </aside>
+    <section class="workspace">
+      <div class="toolbar">
+        <div>
+          <span class="eyebrow">DEVELOPMENT DESK</span>
+          <h1 id="filename">Select a photograph</h1>
+        </div>
+        <div class="zoom-toolbar">
+          <div class="segmented">
+            <button id="fit" class="active" title="Fit to screen">Fit</button>
+            <button id="zoom-out" title="Zoom out (−)">−</button>
+            <span id="zoom-level" class="zoom-display" title="Current zoom level">Fit</span>
+            <button id="zoom-in" title="Zoom in (+)">+</button>
+            <button id="zoom-100" title="100% actual size (1:1)">100%</button>
+            <button id="full-page" title="Toggle full page view (F / Esc)">Full Page</button>
+          </div>
+
+        </div>
+      </div>
+      <div class="viewer" id="viewer">
+        <div class="empty" id="empty">
+          <h2>One photo. Different looks.</h2>
+          <p>Import a RAW file and compare profiles on your image.</p>
+        </div>
+        <div id="pair" hidden>
+          <figure id="fig-before">
+            <figcaption>BASE DEVELOP</figcaption>
+            <div class="img-viewport" id="viewport-before">
+              <img id="before" alt="Base develop" draggable="false">
+            </div>
+          </figure>
+          <figure id="fig-after">
+            <figcaption id="after-label">PROFILE</figcaption>
+            <div class="img-viewport" id="viewport-after">
+              <img id="after" alt="Profile result" draggable="false">
+            </div>
+          </figure>
+        </div>
+      </div>
+      <div class="status" role="status" aria-live="polite" id="status">Ready to import</div>
+      <div id="results" class="results"></div>
+    </section>
+    <aside class="controls">
+      <div class="section-title">YOUR EDIT</div>
+      <div class="profile-header-row">
+        <div class="profile-header-left">
+          <label for="profile-toggle">Color profiles</label>
+          <button type="button" id="profile-info-btn" class="btn-info" title="View profile guide & descriptions">ℹ</button>
+        </div>
+        <span id="profile-selected-badge" class="badge">1 selected</span>
+      </div>
+      <div class="profile-multiselect" id="profile-multiselect">
+        <button type="button" class="profile-select-toggle" id="profile-toggle">
+          <span id="profile-summary">Select profiles...</span>
+          <span class="chevron">▾</span>
+        </button>
+        <div class="profile-dropdown" id="profile-dropdown" hidden>
+          <div class="profile-dropdown-toolbar">
+            <button type="button" id="select-all-profiles" class="btn-mini">All</button>
+            <button type="button" id="select-none-profiles" class="btn-mini">Clear</button>
+            <input type="text" id="profile-search" placeholder="Filter profiles..." class="profile-filter-input">
+          </div>
+          <div class="profile-options" id="profile-options"></div>
+        </div>
+      </div>
+      <label for="intensity">Intensity <output id="intensity-value">80 %</output></label>
+      <input id="intensity" type="range" min="0" max="100" value="80">
+      <label for="exposure">Exposure compensation <output id="exposure-value">0 EV</output></label>
+      <input id="exposure" type="range" min="-2" max="2" step="0.1" value="0">
+      <label class="check"><input id="adapt" type="checkbox" checked> Adapt luminance</label>
+      <hr>
+      <label class="check"><input id="model" type="checkbox"> Adapt with local model</label>
+      <p class="hint">The local model inspects the image and suggests parameters. Darktable renders the final image.</p>
+      <label for="intent">Editing prompt / direction</label>
+      <textarea id="intent" rows="4" placeholder="e.g. preserve whites and slightly cool the shadows."></textarea>
+      <button class="primary" id="develop" disabled>Develop profile</button>
+      <button id="all" disabled>Compare all profiles</button>
+      <button id="export" disabled>Export selection</button>
+      <button id="clear-cache" class="btn-subtle btn-clear-cache" title="Delete all developed preview caches">Clear developed cache</button>
+      <details>
+        <summary>Decisions & recipe</summary>
+        <p id="reason">Decisions will appear after development.</p>
+        <pre id="recipe"></pre>
+      </details>
+    </aside>
+  </main>
+  <dialog id="browser" class="browser-dialog">
+    <div class="dialog-head">
+      <div class="browser-head-title">
+        <h2>Import Photos</h2>
+        <span class="browser-head-subtitle">Browse any folder, preview photos, and select images to import</span>
+      </div>
+      <button id="close-browser" class="btn-icon-close" title="Close">✕</button>
+    </div>
+
+    <!-- Quick Navigation & Location Bar -->
+    <div class="browser-location-bar">
+      <div class="browser-quick-chips">
+        <div class="browser-drives" id="browser-drives"></div>
+        <div class="browser-folder-actions">
+          <button type="button" id="browser-default-btn" class="chip-btn" title="Go to default photos folder">Main Folder</button>
+          <button type="button" id="browser-set-default-btn" class="chip-btn" title="Set current folder as default photos folder">Set as Main</button>
+        </div>
+      </div>
+      <div class="browser-path-row">
+        <button type="button" id="parent" class="btn-nav" title="Up to parent folder">Up</button>
+        <div class="browser-path-input-wrap">
+          <input type="text" id="browser-path-input" class="browser-path-input" spellcheck="false" placeholder="Enter or paste folder path...">
+        </div>
+        <button type="button" id="browser-go" class="btn-nav">Go</button>
+        <button type="button" id="browser-refresh" class="btn-nav" title="Refresh folder">Refresh</button>
+      </div>
+
+    </div>
+
+    <!-- Subfolders bar (if subfolders exist) -->
+    <div class="browser-folders-section" id="browser-folders-section" hidden>
+      <span class="browser-section-label">Subfolders:</span>
+      <div class="browser-folders-list" id="browser-folders"></div>
+    </div>
+
+    <!-- Selection & Filter Toolbar -->
+    <div class="browser-toolbar">
+      <div class="browser-toolbar-selection">
+        <button type="button" id="select-all" class="btn-mini">Select All</button>
+        <button type="button" id="select-all-raw" class="btn-mini btn-accent-raw">Select All RAW</button>
+        <button type="button" id="select-none" class="btn-mini">Clear</button>
+      </div>
+      <div class="browser-toolbar-search">
+        <input type="text" id="browser-filter" placeholder="Filter photos in folder..." class="browser-filter-input">
+      </div>
+    </div>
+
+    <!-- Photos Grid & List Container -->
+    <div class="browser-content" id="browser-content">
+      <div class="browser-grid" id="browser-grid"></div>
+      <div class="browser-empty" id="browser-empty" hidden>
+        <p>No supported photos found in this folder.</p>
+        <span class="browser-empty-hint">Supported formats: Sony ARW, Canon CR2/CR3, Nikon NEF, DNG, Fuji RAF, JPG, PNG, TIFF</span>
+      </div>
+    </div>
+
+    <!-- Dialog Footer -->
+    <div class="dialog-foot">
+      <div class="browser-foot-status">
+        <span id="selected-count">0 selected</span>
+        <span id="selected-details" class="selected-details"></span>
+      </div>
+      <div class="browser-foot-buttons">
+        <button type="button" id="cancel-browser" class="btn-subtle">Cancel</button>
+        <button type="button" class="primary" id="confirm-import" disabled>Import selection</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="profile-info-dialog" class="info-dialog">
+    <div class="dialog-head">
+      <h2>Color Profile Guide</h2>
+      <button id="close-profile-info">Close</button>
+    </div>
+    <div id="profile-info-list" class="profile-info-list"></div>
+  </dialog>
+  <script src="/app.js"></script>
+</body>
+</html>
