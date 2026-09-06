@@ -1,8 +1,8 @@
 [
   {
     "id": "01_CINEMATICO",
-    "title": "CinematogrÃ¡fico contenido",
-    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "title": "Subdued Cinematic",
+    "description": "Original profile color; no inherited crop or blur.",
     "stack": [
       {
         "operation": "sigmoid",
@@ -56,8 +56,8 @@
   },
   {
     "id": "02_JADE_FRIO",
-    "title": "Jade frÃ­o",
-    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "title": "Cool Jade",
+    "description": "Original profile color; no inherited crop or blur.",
     "stack": [
       {
         "operation": "sigmoid",
@@ -106,8 +106,8 @@
   },
   {
     "id": "03_CALIDO_FOCO",
-    "title": "CÃ¡lido mate",
-    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "title": "Warm Matte",
+    "description": "Original profile color; no inherited crop or blur.",
     "stack": [
       {
         "operation": "sigmoid",
@@ -154,8 +154,8 @@
   },
   {
     "id": "04_NEON",
-    "title": "NeÃ³n azul-violeta",
-    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "title": "Neon Blue-Violet",
+    "description": "Original profile color; no inherited crop or blur.",
     "stack": [
       {
         "operation": "sigmoid",
@@ -206,8 +206,8 @@
   },
   {
     "id": "05_NOIR",
-    "title": "Blanco y negro grÃ¡fico",
-    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "title": "Graphic Black & White",
+    "description": "Original profile color; no inherited crop or blur.",
     "stack": [
       {
         "operation": "sigmoid",
@@ -252,8 +252,8 @@
   },
   {
     "id": "06_EDITORIAL",
-    "title": "Editorial natural",
-    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "title": "Natural Editorial",
+    "description": "Original profile color; no inherited crop or blur.",
     "stack": [
       {
         "operation": "sigmoid",
@@ -293,8 +293,8 @@
   },
   {
     "id": "07_PASTEL",
-    "title": "Pastel suave",
-    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "title": "Soft Pastel",
+    "description": "Original profile color; no inherited crop or blur.",
     "stack": [
       {
         "operation": "sigmoid",
@@ -337,8 +337,8 @@
   },
   {
     "id": "08_CONTRASTE_DESATURADO",
-    "title": "Contraste desaturado",
-    "description": "Color del perfil original; sin recorte ni desenfoque heredados.",
+    "title": "Desaturated Contrast",
+    "description": "Original profile color; no inherited crop or blur.",
     "stack": [
       {
         "operation": "sigmoid",
@@ -373,6 +373,592 @@
           "sigma_r": 0.5,
           "sigma_s": 0.5,
           "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "09_PORTRA_WARM",
+    "title": "Warm Portra",
+    "description": "Flattering warm skin tones, gentle highlight roll-off, soft micro-contrast, and golden undertones inspired by classic portrait film.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.38,
+          "contrast_skewness": 0.04,
+          "display_black_target": 0.04
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.03,
+          "highlights_Y": -0.02,
+          "highlights_C": 0.006,
+          "highlights_H": 55.0,
+          "midtones_C": 0.007,
+          "midtones_H": 48.0,
+          "shadows_C": 0.004,
+          "shadows_H": 220.0,
+          "vibrance": 0.08,
+          "contrast": 0.015
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_green": 0.82,
+          "sat_yellow": 0.88,
+          "hue_green": 14.0,
+          "hue_yellow": 6.0,
+          "bright_orange": 1.05,
+          "sat_orange": 1.08,
+          "sat_red": 1.04,
+          "sat_blue": 0.9
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.12,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "10_CLASSIC_CHROME",
+    "title": "Classic Chrome",
+    "description": "Subdued saturation with deep, rich midtone contrast and muted sky tones, ideal for documentary and street photography.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.58,
+          "contrast_skewness": -0.02,
+          "display_black_target": 0.025
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.035,
+          "highlights_Y": 0.02,
+          "saturation_global": -0.16,
+          "chroma_global": -0.06,
+          "contrast": 0.04,
+          "shadows_C": 0.006,
+          "shadows_H": 235.0,
+          "highlights_C": 0.003,
+          "highlights_H": 50.0
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_blue": 0.76,
+          "bright_blue": 0.92,
+          "sat_cyan": 0.8,
+          "sat_green": 0.78,
+          "sat_yellow": 0.82,
+          "sat_red": 1.08,
+          "sat_orange": 0.96
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.25,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "11_GOLDEN_HOUR",
+    "title": "Golden Hour",
+    "description": "Infuses warm sunset amber and honey tones across midtones and highlights with soft glowing shadow transitions.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.44,
+          "contrast_skewness": 0.06,
+          "display_black_target": 0.035
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.04,
+          "global_C": 0.004,
+          "global_H": 50.0,
+          "highlights_C": 0.012,
+          "highlights_H": 48.0,
+          "midtones_C": 0.009,
+          "midtones_H": 42.0,
+          "shadows_C": 0.005,
+          "shadows_H": 260.0,
+          "vibrance": 0.12,
+          "contrast": 0.025
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_orange": 1.22,
+          "bright_orange": 1.08,
+          "sat_yellow": 1.15,
+          "hue_yellow": -6.0,
+          "sat_red": 1.12,
+          "sat_blue": 0.85
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.16,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "12_KODACHROME",
+    "title": "Vintage Kodachrome",
+    "description": "Punchy saturated primary reds and vibrant blues with high midtone contrast reminiscent of 1960s color slide film.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.62,
+          "contrast_skewness": 0.01,
+          "display_black_target": 0.02
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.03,
+          "highlights_Y": 0.02,
+          "highlights_C": 0.005,
+          "highlights_H": 60.0,
+          "shadows_C": 0.005,
+          "shadows_H": 210.0,
+          "chroma_global": 0.1,
+          "contrast": 0.045,
+          "vibrance": 0.14
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_red": 1.24,
+          "bright_red": 1.04,
+          "sat_blue": 1.18,
+          "bright_blue": 0.94,
+          "sat_yellow": 1.1,
+          "sat_green": 0.9,
+          "sat_cyan": 0.95
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.28,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "13_NORDIC_COOL",
+    "title": "Nordic Cool",
+    "description": "Crisp Scandinavian aesthetic with clean cool whites, muted foliage, and enhanced cyan-blue atmospheric clarity.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.46,
+          "contrast_skewness": -0.04,
+          "display_black_target": 0.03
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.04,
+          "global_C": 0.004,
+          "global_H": 215.0,
+          "shadows_C": 0.01,
+          "shadows_H": 225.0,
+          "highlights_C": 0.003,
+          "highlights_H": 195.0,
+          "saturation_global": -0.1,
+          "contrast": 0.025
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_green": 0.68,
+          "sat_yellow": 0.72,
+          "hue_green": 18.0,
+          "sat_cyan": 1.18,
+          "sat_blue": 1.12,
+          "hue_blue": -6.0,
+          "bright_cyan": 1.04
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.3,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "14_MOODY_FOREST",
+    "title": "Moody Forest",
+    "description": "Deep emerald greens, suppressed foliage yellowing, and rich lifted shadows crafted for nature, woods, and rain.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.48,
+          "contrast_skewness": -0.06,
+          "display_black_target": 0.075
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.05,
+          "shadows_C": 0.012,
+          "shadows_H": 165.0,
+          "midtones_C": 0.006,
+          "midtones_H": 150.0,
+          "highlights_C": 0.004,
+          "highlights_H": 70.0,
+          "contrast": 0.03,
+          "saturation_global": -0.08
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "hue_green": 24.0,
+          "bright_green": 0.88,
+          "sat_green": 1.14,
+          "sat_yellow": 0.52,
+          "hue_yellow": 16.0,
+          "sat_orange": 0.9,
+          "sat_blue": 0.78
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.24,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "15_URBAN_CYBER",
+    "title": "Urban Cyberpunk",
+    "description": "High-impact nocturnal look with vivid teal-blue shadow depth and vibrant neon amber streetlight highlights.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.6,
+          "contrast_skewness": -0.03,
+          "display_black_target": 0.02
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.05,
+          "shadows_C": 0.02,
+          "shadows_H": 215.0,
+          "highlights_C": 0.014,
+          "highlights_H": 42.0,
+          "contrast": 0.055,
+          "chroma_global": 0.08,
+          "vibrance": 0.16
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_cyan": 1.35,
+          "sat_blue": 1.25,
+          "bright_cyan": 1.08,
+          "sat_orange": 1.25,
+          "sat_magenta": 1.2,
+          "sat_yellow": 0.5,
+          "sat_green": 0.45
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.32,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "16_MONO_FINE_ART",
+    "title": "Silver Fine Art B&W",
+    "description": "Silky tonal gradations from rich deep blacks to luminous highlights inspired by traditional darkroom silver gelatin prints.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.42,
+          "contrast_skewness": 0.02,
+          "display_black_target": 0.02
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.035,
+          "contrast": 0.02
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_yellow": 1.0,
+          "sat_green": 1.0
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.32,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      },
+      {
+        "operation": "monochrome",
+        "params": {
+          "a": 0.0,
+          "b": 0.0,
+          "size": 1.5,
+          "highlights": 0.18
+        }
+      }
+    ]
+  },
+  {
+    "id": "17_FADED_FILM",
+    "title": "Faded Matte Film",
+    "description": "Raised black floor, gently compressed tonal range, and delicate warm shadow toning for an authentic vintage indie look.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.26,
+          "contrast_skewness": 0.08,
+          "display_black_target": 0.26
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.06,
+          "shadows_C": 0.007,
+          "shadows_H": 90.0,
+          "highlights_C": 0.004,
+          "highlights_H": 55.0,
+          "saturation_global": -0.18,
+          "contrast": -0.03
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_green": 0.74,
+          "sat_yellow": 0.8,
+          "sat_blue": 0.78,
+          "bright_orange": 1.06,
+          "sat_orange": 1.02
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.06,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "18_PACIFIC_AQUA",
+    "title": "Pacific Ocean Aqua",
+    "description": "Optimized for beaches, coastlines, and open water, featuring radiant turquoise-cyan waters and warm golden sand tones.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.48,
+          "contrast_skewness": 0.02,
+          "display_black_target": 0.025
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.045,
+          "highlights_Y": 0.015,
+          "highlights_C": 0.006,
+          "highlights_H": 48.0,
+          "shadows_C": 0.008,
+          "shadows_H": 200.0,
+          "vibrance": 0.14,
+          "contrast": 0.03
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_cyan": 1.32,
+          "hue_cyan": 4.0,
+          "bright_cyan": 1.06,
+          "sat_blue": 1.15,
+          "hue_blue": -12.0,
+          "sat_orange": 1.14,
+          "bright_orange": 1.06,
+          "sat_yellow": 0.95
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.22,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "19_HIGH_KEY",
+    "title": "Clean High-Key",
+    "description": "Luminous, airy presentation with pristine whites, open shadows, and refined clarity, perfect for bright modern commercial photography.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.28,
+          "contrast_skewness": 0.12,
+          "display_black_target": 0.02
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.08,
+          "highlights_Y": -0.03,
+          "vibrance": 0.1,
+          "chroma_global": 0.04,
+          "contrast": -0.01
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_orange": 1.06,
+          "bright_orange": 1.08,
+          "sat_yellow": 0.92,
+          "sat_blue": 0.98,
+          "sat_green": 0.92
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.18,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
+    "id": "20_STREET_TRI_X",
+    "title": "Tri-X Street B&W",
+    "description": "Gritty, high-contrast monochrome with deep dramatic shadows and sharp micro-edge definition inspired by classic street photography.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.72,
+          "contrast_skewness": -0.05,
+          "display_black_target": 0.03
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "shadows_Y": 0.04,
+          "contrast": 0.055
+        }
+      },
+      {
+        "operation": "colorequal",
+        "params": {
+          "sat_yellow": 1.0,
+          "sat_green": 1.0
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.38,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      },
+      {
+        "operation": "monochrome",
+        "params": {
+          "a": 0.0,
+          "b": 0.0,
+          "size": 2.5,
+          "highlights": 0.28
         }
       }
     ]
