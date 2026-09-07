@@ -1224,3 +1224,116 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(2px); 
   }
   .viewer { height: 50vh; min-height: 320px; }
 }
+
+/* --- Zonal Editing (Máscaras) --- */
+.zonal-panel {
+  background: #191b1d;
+  border: 1px solid #32363a;
+  border-radius: 6px;
+  margin-top: 10px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.zonal-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: 500;
+  font-size: 12px;
+  color: #ddd;
+}
+.zonal-summary:hover { color: var(--accent); }
+.zonal-content {
+  padding: 10px 12px 14px;
+  border-top: 1px solid #282b2e;
+  background: #16181a;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.zonal-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  background: #202326;
+  padding: 3px;
+  border-radius: 5px;
+  border: 1px solid #33383d;
+}
+.zonal-tab {
+  padding: 5px 3px;
+  font-size: 10px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: #aaa;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.zonal-tab:hover { color: #fff; background: rgba(255, 255, 255, 0.05); }
+.zonal-tab.active {
+  background: #353b40;
+  color: var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+.zonal-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 2px;
+}
+.check-compact {
+  margin: 0 !important;
+  font-size: 11px !important;
+  color: #bbb;
+}
+.zone-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.zone-sliders label {
+  margin: 7px 0 2px;
+  font-size: 11px;
+  color: #bbb;
+}
+.zone-sliders label:first-child { margin-top: 0; }
+.zone-sliders output {
+  font-size: 11px;
+}
+.mask-tuning {
+  margin-top: 6px;
+  background: #1c1f22;
+  border: 1px solid #2b3034;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+.mask-tuning summary {
+  font-size: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.zonal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.zonal-actions button {
+  flex: 1;
+}
+#mask-overlay {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  z-index: 10;
+  mix-blend-mode: normal;
+  will-change: transform;
+}

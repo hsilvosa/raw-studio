@@ -118,3 +118,61 @@ Expanded the catalog from 8 to 20 carefully calibrated photographic profiles:
 - **Minimized Floating Dock in Full Page Mode**:
   - When in Full Page mode, the profile bar docks at the bottom edge as a subtle, translucent peeking strip (`opacity: 0.25`).
   - Moving the mouse down over the bottom edge smoothly expands the dock (`transform: translateY(0); opacity: 1; backdrop-filter: blur(16px)`), allowing quick switching between developed looks without leaving Full Page mode.
+
+### 11. Local Vision Model (Qwen3-VL-4B-Instruct) Verification & Supervisor
+- **Model Download & Architecture Verification**:
+  - Verified and finalized weights in `.studio/models/qwen3-vl-4b/`: `Qwen3VL-4B-Instruct-Q4_K_M.gguf` (2.49 GB) and `mmproj-Qwen3VL-4B-Instruct-F16.gguf` (836 MB).
+  - Configured hardware-accelerated local execution via `llama-server.exe` leveraging NVIDIA GPU offload (`-ngl 99`, RTX 3060).
+- **Process Supervisor & Health Monitoring**:
+  - Integrated `ensure_server()` in `studio/model.py` which automatically checks connection health and launches `llama-server` in the background if weights are present.
+  - Added model download status and GPU/slot readiness telemetry to `/api/status`.
+- **Vision-to-Darktable Development**:
+  - Multi-modal inference: Qwen3-VL inspects real candidate renders along with rich photographic telemetry (white balance, skin detection, dynamic range, noise).
+  - Strict compliance with numeric `LIMITS` in `studio/recipes.py`: generates Spanish explanations and safe module adjustments applied directly to Darktable.
+
+### 12. Advanced Photographic Scene Adaptation
+- **Scene White Balance & Color Cast Analysis**:
+  - Automatically identifies neutral midtones using chromaticity analysis (excluding saturated light sources and extreme shadows).
+  - Computes temperature (Kelvin shift) and tint (green-magenta) deviations.
+  - Applies gentle neutral balance compensation or preserves atmospheric mood.
+- **Intelligent Skin Tone Protection**:
+  - Segmented skin candidate pixels in HSV / YCbCr color spaces.
+  - Automatically detects skin presence and bounds saturation, vibrance, and midtone contrast to prevent orange, oversaturated, or unnatural skin tones.
+- **Highlight & White Clipping Protection**:
+  - Analyzes specular fraction vs diffuse highlight slope (p95, p99, white fraction).
+  - Automatically caps exposure and softens sigmoid highlight roll-off (`middle_grey_contrast`, `display_black_target`) to protect clouds, bright signage, and specular reflections from harsh clipping.
+- **Adaptive Noise & Sharpening Engine**:
+  - Evaluates high-frequency noise variance in flat/shadow areas.
+  - Noisy scenes: engages bilateral filtering (`bilat`) and raises sharpening threshold to suppress grain amplification.
+  - Clean scenes: applies crisp micro-contrast and edge sharpening (`sharpen`).
+- **Transparent Decision Rationales**:
+  - Each adaptation provides detailed Spanish explanations of technical decisions made.
+
+### 13. Zonal Editing Engine (Subject, Sky, Background Masks + Manual Tuning)
+- **Multi-Zone Semantic Segmentation**:
+  - **Sujeto (Subject / Foreground)**: Saliency map combining center-weighted Gaussian spatial prior, skin tone detection, focus sharpness density, and local contrast.
+  - **Cielo (Sky)**: Sky detection combining vertical gradient prior, luminance, low texture variance, and atmospheric color coherence.
+  - **Fondo (Background)**: Non-subject, non-sky region with depth gradient.
+- **Precision Photographic Adjustments per Zone**:
+  - **Luz (Light)**: Calibrated EV exposure offset (-2.0 to +2.0 EV) and S-curve contrast.
+  - **Color**: Temperature warmth/cool (-40 to +40), tint, and saturation scaling.
+  - **Detalle (Detail)**: Multi-scale unsharp contrast boost (-50% to +100%).
+  - **Desenfoque (Defocus / Bokeh Blur)**: Gaussian depth-of-field defocus blur (0 to 20 px).
+- **Interactive UI Controls**:
+  - Collapsible **Zonal Editing (Máscaras)** panel with tabs for Subject, Sky, and Background.
+  - Real-time **Ruby Mask Overlay** preview rendered directly onto the comparison viewer.
+  - Precision sliders for Light, Warmth, Detail, Defocus/Bokeh, Feather radius, and Threshold sensitivity.
+  - Apply and Reset controls with live server rendering.
+
+### 14. Multi-Scene Model Decision Evaluation Suite
+- **Quantitative Quality Scoring**:
+  - Evaluates highlight preservation (white clipping fraction), shadow recovery, dynamic range utilization, and skin tone harmony.
+- **Multi-Stage Comparative Benchmarking**:
+  - Benchmarks 4 stages across real photo scenes:
+    1. Fixed Profile baseline
+    2. Algorithmic Adaptation
+    3. Qwen3-VL Model-Directed Adaptation
+    4. Zonal-Enhanced Refinement
+- **Visual HTML Report & Telemetry**:
+  - Generates `.studio/reports/evaluation_report.html` and `.studio/reports/evaluation_summary.json` with side-by-side renders, metric comparisons, and model reasoning text.
+  - Accessible via web UI at `/api/reports/evaluation` or via CLI command `python scripts/evaluate-model.py`.

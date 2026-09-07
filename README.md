@@ -25,28 +25,59 @@ Darktable debe incluir el ejecutable experimental `darktable-mcp.exe`. La instal
 
 Los detalles de las versiones y cambios están documentados en [CHANGELOG.md](file:///d:/FOTOS/revelado-local/CHANGELOG.md).
 
-## Modelo local
+## Modelo local y supervisión
 
-Se utiliza Qwen3-VL-4B-Instruct Q4_K_M con llama.cpp. Descarga los pesos una vez y arranca el servidor en otra terminal:
+Se utiliza Qwen3-VL-4B-Instruct Q4_K_M con llama.cpp sobre GPU local. La descarga y arranque pueden gestionarse con los scripts dedicados:
 
 ```powershell
 ./scripts/download-model.ps1
 ./scripts/run-model.ps1
 ```
 
-Activa «Adaptar con modelo local» cuando aparezca conectado. `MODEL_URL` permite utilizar otro servidor compatible, siempre en localhost. Las imágenes no salen del equipo. La descarga de los pesos sí requiere Internet.
+La aplicación incluye un supervisor automático (`ensure_server()`) que verifica la disponibilidad del modelo en `http://127.0.0.1:8081/v1` y monitoriza su estado de salud en tiempo real.
 
-El modelo recibe una previsualización, mediciones y la receta actual; devuelve JSON. La aplicación valida módulos, campos, tipos y límites antes de llamar a darktable. Una propuesta inválida falla de forma visible y nunca se ejecuta. No se permite al modelo elegir rutas, ejecutar comandos, suministrar parámetros binarios o escribir píxeles.
+El modelo recibe una previsualización de la imagen, telemetría fotográfica (luminancia, recorte de blancos, dominantes de color y presencia de tonos de piel) y la receta base; devuelve un objeto JSON estructurado con ajustes acotados y justificación estética en español. La aplicación valida estrictamente los módulos y rangos permitidos (`LIMITS` en `studio/recipes.py`) antes de invocar a Darktable por stdio JSON-RPC.
 
-Fuentes: [pesos oficiales de Qwen](https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct-GGUF), [llama.cpp](https://github.com/ggml-org/llama.cpp).
+## Adaptación fotográfica avanzada
 
-## Estado y límites
+El motor de adaptación (`studio/adaptation.py`) analiza la fotografía antes de proponer y aplicar el revelado:
 
-La primera versión incluye biblioteca persistente, copias verificadas, ocho perfiles, adaptación tonal acotada, comparación, cola de trabajo, conector visual local y exportación. Los perfiles se han separado de los recortes y el desenfoque de las pruebas antiguas: no se transfieren geometrías de una escena a otra.
+- **Balance de blancos por escena**: Detecta dominantes cromáticas en tonos medios neutros y compensa suavemente la temperatura (`temp_bias`) y el tinte (`tint_bias`) sin alterar intenciones artísticas marcadas.
+- **Protección de tonos de piel**: Identifica regiones de piel humana mediante segmentación en espacios HSV y YCbCr. Si se detectan tonos de piel, acota aumentos agresivos de contraste y vibranza, aplicando curvas suaves para preservar la naturalidad de los rostros.
+- **Protección de blancos y altas luces**: Monitoriza percentiles altos de luminosidad (P98 y P99.5). En escenas con riesgo de sobreexposición, ajusta la caída de altas luces en el módulo sigmoid (`sig_highlight_rolloff`) y atenúa la exposición.
+- **Enfoque y ruido adaptativo**: Estima la varianza de ruido de alta frecuencia (`noise_sigma`). En escenas de alto ISO o ruido notable, incrementa el umbral de enfoque (`sharpen_threshold`) y eleva el perfil de reducción de ruido bilateral, evitando amplificar el grano.
 
-La adaptación tonal inicial es una heurística de luminancia, no una evaluación estética. El modelo propone una única revisión; aún no hay segmentación, máscaras locales, balance de blancos adaptativo, reducción de ruido por ISO, preferencias aprendidas . Los resultados y recetas permanecen en disco y se recuperan al reiniciar. La calidad artística del modelo requiere evaluación con más escenas.
+## Edición por zonas
 
-Los RAW y sus XMP originales no se editan. `.studio` contiene copias, biblioteca, modelos, previsualizaciones y registros; está fuera de Git, igual que las fotografías y exportaciones. Solo el código y las recetas de perfil forman parte del repositorio.
+La interfaz y el motor de zonas (`studio/zones.py`) permiten aplicar ajustes diferenciados sobre tres regiones semánticas clave:
+
+- **Sujeto (Subject)**: Enfatiza luminosidad, calidez focal y micro-contraste en el motivo principal.
+- **Cielo (Sky)**: Permite oscurecer o saturar las altas luces atmosféricas sin afectar al primer término.
+- **Fondo (Background)**: Permite atenuar la atención, enfriar tonos o aplicar desenfoque óptico gradual (**Desenfoque / Bokeh**) respetando la profundidad.
+
+Incluye visualización de máscara en tiempo real (**Mostrar máscara rubí**) y deslizadores manuales para Luz (EV), Color (Calidez, Tinte, Saturación), Detalle y Desenfoque.
+
+## Evaluación del modelo y perfiles
+
+Para verificar objetivamente las decisiones del modelo frente a perfiles fijos y adaptaciones algorítmicas, se incluye una suite de evaluación (`studio/evaluator.py` y `scripts/evaluate-model.py`):
+
+```powershell
+python ./scripts/evaluate-model.py --profile 09_PORTRA_WARM
+```
+
+El script compara 4 etapas en paralelo (Perfil Fijo, Adaptación Algorítmica, Modelo Qwen3-VL y Refinamiento Zonal), midiendo:
+- Porcentaje de píxeles quemados (recorte de blancos >99.5%).
+- Porcentaje de sombras empastadas (recorte de negros <0.5%).
+- Rango dinámico efectivo (EV).
+- Puntuación de armonía de tonos de piel (0–100).
+
+Genera automáticamente un informe interactivo con miniaturas comparativas e histogramas en `.studio/reports/evaluation_report.html` y `.studio/reports/evaluation_summary.json`.
+
+## Estado y seguridad
+
+- Los archivos RAW y XMP originales nunca se modifican ni se eliminan.
+- Todo el procesamiento es estrictamente local; ninguna imagen ni telemetría sale del equipo.
+- Las recetas y máscaras son reproducibles y no destructivas.
 
 ## Pruebas
 
@@ -54,4 +85,4 @@ Los RAW y sus XMP originales no se editan. `.studio` contiene copias, biblioteca
 python -m pytest tests -q
 ```
 
-Las pruebas cubren el contrato del modelo, preservación de originales, límites de rutas y acceso local. Las pruebas de integración requieren darktable y fotografías reales.
+Las pruebas cubren la supervisión del modelo local, el motor de adaptación fotográfica, la segmentación y ajuste de zonas, y el aislamiento de rutas.

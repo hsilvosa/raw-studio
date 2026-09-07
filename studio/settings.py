@@ -32,3 +32,7 @@ DARKTABLE = Path(os.environ.get('DARKTABLE_MCP', str(Path.home() / 'AppData/Loca
 MODEL_URL = os.environ.get('MODEL_URL', 'http://127.0.0.1:8081/v1')
 CAMERA_RAW_EXTENSIONS = {'.arw', '.cr2', '.cr3', '.nef', '.nrw', '.dng', '.raf', '.rw2', '.orf', '.pef', '.srw', '.srf', '.raw'}
 RAW_EXTENSIONS = CAMERA_RAW_EXTENSIONS | {'.jpg', '.jpeg', '.png', '.tif', '.tiff', '.webp'}
+
+MODEL_DIR = STATE / 'models' / 'qwen3-vl-4b'
+MODEL_FILE = MODEL_DIR / 'Qwen3VL-4B-Instruct-Q4_K_M.gguf'
+MMPROJ_FILE = MODEL_DIR / 'mmproj-Qwen3VL-4B-Instruct-F16.gguf'

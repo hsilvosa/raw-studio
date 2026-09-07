@@ -4,16 +4,19 @@ import math
 import os
 import shutil
 import threading
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlparse
+import numpy as np
+from PIL import Image
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from . import library, model
+from . import library, model, adaptation, zones
 from .darktable import Darktable
 from .recipes import make_stack, merge, profiles, validate_proposal
 from .settings import (
@@ -136,21 +139,22 @@ def develop(job_id, request):
     if library.digest(source) != image['sha256']:
         raise ValueError('The RAW copy has changed; please re-import the original')
     preview = base_preview(image)
-    measurements = library.measure(preview)
-    exposure = 0.
+    telemetry = adaptation.analyze_scene(preview)
+    base_stack = make_stack(profile, request.exposure_offset, request.intensity)
+
     if request.adapt:
-        # Bounded technical correction; dark scenes are never normalized to daylight.
-        exposure = max(-.5, min(1.25, math.log2(.22 / max(.03, measurements['median']))))
-        if measurements['white_fraction'] > .015:
-            exposure = min(exposure, .25)
-    exposure = max(-2., min(4., exposure + request.exposure_offset))
-    stack = make_stack(profile, exposure, request.intensity)
-    stack.append({'operation': 'sharpen', 'params': {'amount': .45, 'radius': .7, 'threshold': 1.}})
+        stack, reason, measurements = adaptation.adapt_stack(base_stack, telemetry, request.exposure_offset, request.intensity)
+    else:
+        stack = base_stack
+        stack.append({'operation': 'sharpen', 'params': {'amount': .45, 'radius': .7, 'threshold': 1.}})
+        reason = 'Profile applied without automatic tone adaptation.'
+        measurements = telemetry
+
     folder = STATE / 'renders' / job_id
     candidate = folder / 'preview.png'
     update(job_id, message='Developing with darktable')
     engine.export(source, stack, candidate, request.width)
-    reason = 'Profile applied with bounded tone correction.' if request.adapt else 'Profile applied without automatic tone adaptation.'
+
     model_name = None
     proposal = None
     if request.use_model:
@@ -158,18 +162,22 @@ def develop(job_id, request):
         # Render a small model input through darktable, never an image generator.
         model_preview = folder / 'model-input.png'
         engine.export(source, stack, model_preview, 768)
-        proposal, model_name = model.propose(model_preview, stack, library.measure(candidate), profile['title'] + '. ' + request.intent)
+        proposal, model_name = model.propose(model_preview, stack, telemetry, profile['title'] + '. ' + request.intent)
         stack = merge(stack, proposal)
         update(job_id, message='Applying model recipe in darktable')
         candidate = folder / 'adapted.png'
         engine.export(source, stack, candidate, request.width)
         reason = proposal.reason
-    after = library.measure(candidate)
+
+    after = adaptation.analyze_scene(candidate)
     warnings = []
     if after['white_fraction'] > .02:
         warnings.append('Highlights are near white: check specular reflections and signs.')
     if after['black_fraction'] > .15:
         warnings.append('Deep shadows detected: verify shadow detail meets expectations.')
+    if after.get('skin_detected'):
+        warnings.append(f"Skin tones present ({after['skin_fraction']*100:.1f}%): natural skin palette preserved.")
+
     recipe = {'image_id': image['id'], 'source_sha256': image['sha256'], 'profile_id': profile['id'],
               'profile_title': profile['title'], 'request': request.model_dump(), 'stack': stack,
               'reason': reason, 'model': model_name, 'proposal': proposal.model_dump() if proposal else None,
@@ -368,12 +376,144 @@ def recipe_path(identifier):
     return path
 
 
-@app.get('/api/renders/{identifier}/image')
-def rendered_image(identifier: str):
+class ZoneAdjustRequest(BaseModel):
+    zones: dict[str, dict] = Field(default_factory=dict)
+
+
+@app.get('/api/renders/{identifier}/zones')
+def get_render_zones(identifier: str):
+    folder = STATE / 'renders' / identifier
+    if not folder.is_dir():
+        raise HTTPException(404, 'Render not found')
     recipe = json.loads(recipe_path(identifier).read_text(encoding='utf-8'))
+    zones_params = recipe.get('zones_params', copy.deepcopy(zones.DEFAULT_ZONE_PARAMS))
+    has_zonal = (folder / 'zonal.png').is_file()
+    return {
+        'render_id': identifier,
+        'has_zonal': has_zonal,
+        'zones_params': zones_params,
+        'available_zones': ['subject', 'sky', 'background'],
+    }
+
+
+@app.post('/api/renders/{identifier}/zones/apply')
+def apply_render_zones(identifier: str, req: ZoneAdjustRequest):
+    folder = STATE / 'renders' / identifier
+    if not folder.is_dir():
+        raise HTTPException(404, 'Render not found')
+    recipe_file = recipe_path(identifier)
+    recipe = json.loads(recipe_file.read_text(encoding='utf-8'))
+
+    # Base image is adapted.png if model ran, else preview.png
+    input_path = folder / 'adapted.png' if (folder / 'adapted.png').is_file() else folder / 'preview.png'
+    if not input_path.is_file():
+        raise HTTPException(404, 'Base image preview not found')
+
+    with Image.open(input_path) as im:
+        masks = zones.generate_zone_masks(im)
+        adjusted_im = zones.apply_zone_adjustments(im, masks, req.zones)
+        zonal_path = folder / 'zonal.png'
+        adjusted_im.save(zonal_path, 'PNG')
+
+    recipe['zones_params'] = req.zones
+    recipe['has_zonal'] = True
+    library.save_json(recipe_file, recipe)
+    return {
+        'render_id': identifier,
+        'url': f'/api/renders/{identifier}/image?t={int(time.time() * 1000)}',
+        'has_zonal': True,
+        'zones_params': req.zones,
+    }
+
+
+@app.post('/api/renders/{identifier}/zones/reset')
+def reset_render_zones(identifier: str):
+    folder = STATE / 'renders' / identifier
+    if not folder.is_dir():
+        raise HTTPException(404, 'Render not found')
+    zonal_path = folder / 'zonal.png'
+    if zonal_path.is_file():
+        try:
+            zonal_path.unlink()
+        except Exception:
+            pass
+    recipe_file = recipe_path(identifier)
+    recipe = json.loads(recipe_file.read_text(encoding='utf-8'))
+    recipe['has_zonal'] = False
+    recipe['zones_params'] = copy.deepcopy(zones.DEFAULT_ZONE_PARAMS)
+    library.save_json(recipe_file, recipe)
+    return {
+        'render_id': identifier,
+        'url': f'/api/renders/{identifier}/image?t={int(time.time() * 1000)}',
+        'has_zonal': False,
+    }
+
+
+@app.get('/api/renders/{identifier}/zones/mask')
+def get_render_zone_mask(identifier: str, zone: str = 'subject', ruby: bool = True):
+    folder = STATE / 'renders' / identifier
+    if not folder.is_dir():
+        raise HTTPException(404, 'Render not found')
+    recipe = json.loads(recipe_path(identifier).read_text(encoding='utf-8'))
+    zones_params = recipe.get('zones_params', copy.deepcopy(zones.DEFAULT_ZONE_PARAMS))
+    z_cfg = zones_params.get(zone, {})
+
+    input_path = folder / 'adapted.png' if (folder / 'adapted.png').is_file() else folder / 'preview.png'
+    if not input_path.is_file():
+        raise HTTPException(404, 'Base image preview not found')
+
+    with Image.open(input_path) as im:
+        masks = zones.generate_zone_masks(im)
+        raw_m = masks.get(zone)
+        if raw_m is None:
+            raw_m = masks.get('subject')
+        refined = zones.refine_mask(
+            raw_m,
+            sensitivity=z_cfg.get('sensitivity', 0),
+            feather=z_cfg.get('feather', 12),
+            invert=z_cfg.get('invert', False)
+        )
+        if ruby:
+            overlay_im = zones.create_ruby_overlay(im, refined)
+            mask_preview_path = folder / f'mask_{zone}_ruby.png'
+            overlay_im.save(mask_preview_path, 'PNG')
+            return FileResponse(mask_preview_path, media_type='image/png')
+        else:
+            m_uint = (np.clip(refined, 0.0, 1.0) * 255).astype(np.uint8)
+            mask_im = Image.fromarray(m_uint, mode='L')
+            mask_preview_path = folder / f'mask_{zone}_mono.png'
+            mask_im.save(mask_preview_path, 'PNG')
+            return FileResponse(mask_preview_path, media_type='image/png')
+
+
+@app.get('/api/reports/evaluation')
+def get_evaluation_report():
+    report_file = STATE / 'reports' / 'evaluation_report.html'
+    if not report_file.is_file():
+        raise HTTPException(404, 'Evaluation report not yet generated. Run scripts/evaluate-model.py first.')
+    return FileResponse(report_file, media_type='text/html')
+
+
+@app.get('/api/reports/img')
+def get_report_img(p: str):
+    file_path = Path(p).resolve()
+    # Security: must reside inside STATE directory
+    if not str(file_path).startswith(str(STATE.resolve())) or not file_path.is_file():
+        raise HTTPException(403, 'Forbidden image path')
+    return FileResponse(file_path, media_type='image/png')
+
+
+@app.get('/api/renders/{identifier}/image')
+def rendered_image(identifier: str, raw: bool = False):
+    folder = STATE / 'renders' / identifier
+    recipe = json.loads(recipe_path(identifier).read_text(encoding='utf-8'))
+    if not raw:
+        zonal = folder / 'zonal.png'
+        if zonal.is_file():
+            return FileResponse(zonal)
     preview = Path(recipe['preview'])
     if not preview.is_file():
-        candidate = STATE / 'renders' / identifier / preview.name
+        candidate = folder / preview.name
         if candidate.is_file():
             preview = candidate
     return FileResponse(preview)
@@ -395,8 +535,19 @@ def export_render(job_id, recipe):
     output = target / (job_id[:12] + '.png')
     update(job_id, message='Exporting PNG at 6000 pixels')
     engine.export(Path(image['copy']), recipe['stack'], output, 6000)
+    # If zonal editing was applied, apply to exported 6000px image
+    folder = STATE / 'renders' / recipe.get('render_id', '')
+    if (folder / 'zonal.png').is_file() and recipe.get('zones_params'):
+        try:
+            with Image.open(output) as im:
+                masks = zones.generate_zone_masks(im)
+                adjusted_im = zones.apply_zone_adjustments(im, masks, recipe['zones_params'])
+                adjusted_im.save(output, 'PNG')
+        except Exception:
+            pass
     library.save_json(output.with_suffix('.json'), recipe)
     return {'path': str(output)}
+
 
 
 app.mount('/', StaticFiles(directory=ROOT / 'studio' / 'static', html=True), name='ui')
