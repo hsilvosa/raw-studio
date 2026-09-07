@@ -327,6 +327,7 @@ function setLibrarySelecting(enabled) {
   $('library').classList.toggle('selecting', enabled);
   $('library-selection-bar').hidden = !enabled;
   $('lib-select-mode').textContent = enabled ? 'Cancel' : 'Select';
+  $('lib-select-mode').classList.toggle('active', enabled);
   if (!enabled) selectedLibraryImages.clear();
   updateLibrarySelectionUI();
   renderLibraryItems();
