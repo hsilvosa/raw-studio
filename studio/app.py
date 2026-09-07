@@ -547,9 +547,19 @@ def open_in_file_manager(target: Path):
     folder_str = str(folder.resolve())
 
     if sys.platform == 'win32':
-        # On Windows, os.startfile(folder_str) directly tells the shell to open the folder window
-        # in the user's interactive desktop without spawning hanging DCOM embedding processes.
-        os.startfile(folder_str)
+        if target.is_file():
+            try:
+                subprocess.Popen(f'explorer.exe /select,"{str(target.resolve())}"', shell=True)
+            except Exception:
+                pass
+        try:
+            subprocess.Popen(f'explorer.exe "{folder_str}"', shell=True)
+        except Exception:
+            pass
+        try:
+            os.startfile(folder_str)
+        except Exception:
+            pass
         return True
     elif sys.platform == 'darwin':
         if target.is_file():
@@ -560,6 +570,7 @@ def open_in_file_manager(target: Path):
     else:
         subprocess.Popen(['xdg-open', folder_str])
         return True
+
 
 
 @app.post('/api/system/open-folder')

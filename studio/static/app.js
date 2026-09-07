@@ -1044,10 +1044,25 @@ $('export').onclick = () => task(async () => {
     lastExportedPath = r.path || r.folder || '';
     report(`Exported ${r.count || renderIdsToExport.length} photos to ${r.folder || 'export folder'}`);
   }
+  if (lastExportedPath) {
+    showExportedPath(lastExportedPath);
+  }
   if ($('open-export-folder')) {
     $('open-export-folder').textContent = '📁 Show in Explorer';
   }
 });
+
+function showExportedPath(path) {
+  if (!path) return;
+  const box = $('export-path-box');
+  const text = $('export-path-text');
+  if (box && text) {
+    box.style.display = 'flex';
+    text.textContent = path;
+    text.title = path;
+  }
+}
+
 
 function openExportModal() {
   const currentResults = current ? (results.get(current.id) || []) : [];
@@ -1165,12 +1180,27 @@ if ($('open-export-folder')) {
     try {
       const res = await api('/system/open-folder', { path: lastExportedPath });
       const shownPath = res.folder || res.opened || '';
+      showExportedPath(shownPath);
       report('Opened in file explorer: ' + shownPath);
       if (navigator.clipboard && shownPath) {
         try { await navigator.clipboard.writeText(shownPath); } catch (_) {}
       }
     } catch (e) {
       report(e.message);
+    }
+  };
+}
+
+if ($('copy-export-path')) {
+  $('copy-export-path').onclick = async () => {
+    const text = $('export-path-text')?.textContent || lastExportedPath;
+    if (text && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(text);
+        const btn = $('copy-export-path');
+        btn.textContent = '✅ Copied!';
+        setTimeout(() => { if ($('copy-export-path')) $('copy-export-path').textContent = '📋 Copy'; }, 2000);
+      } catch (_) {}
     }
   };
 }
@@ -1192,6 +1222,9 @@ if ($('lib-batch-export')) {
     const j = await api('/renders/batch-export', { render_ids: renderIds });
     const r = await waitJob(j.job_id);
     lastExportedPath = r.path || r.folder || '';
+    if (lastExportedPath) {
+      showExportedPath(lastExportedPath);
+    }
     report(`Exported ${r.count || renderIds.length} photos to ${r.folder || 'export folder'}`);
     if ($('open-export-folder')) {
       $('open-export-folder').textContent = '📁 Show in Explorer';
