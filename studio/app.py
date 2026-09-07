@@ -547,9 +547,11 @@ def open_in_file_manager(target: Path):
     folder_str = str(folder.resolve())
 
     if sys.platform == 'win32':
-        if target.is_file():
+        if target.is_file() and target.exists():
             try:
-                subprocess.Popen(['explorer.exe', f'/select,{str(target.resolve())}'])
+                # IMPORTANT: In Windows, /select,"<path>" MUST NOT have quotes around /select,
+                # Using a raw string avoids subprocess.list2cmdline putting quotes around "/select,path"
+                subprocess.Popen(f'explorer.exe /select,"{str(target.resolve())}"')
                 return True
             except Exception:
                 pass
@@ -559,7 +561,7 @@ def open_in_file_manager(target: Path):
         except Exception:
             pass
         try:
-            subprocess.Popen(['explorer.exe', folder_str])
+            subprocess.Popen(f'explorer.exe "{folder_str}"')
             return True
         except Exception:
             pass
