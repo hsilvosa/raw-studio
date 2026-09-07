@@ -508,6 +508,7 @@ function drawResults() {
     const img = new Image();
     img.src = r.url;
     img.alt = r.recipe.profile_title;
+    img.draggable = false;
     thumbWrap.append(img);
 
     if (hasModel) {

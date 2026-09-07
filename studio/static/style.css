@@ -628,7 +628,7 @@ figcaption {
   left: 0;
   top: 0;
   transform-origin: 0 0;
-  pointer-events: none;
+  cursor: inherit;
   will-change: transform;
 }
 
@@ -720,7 +720,6 @@ figcaption {
   height: 100%;
   object-fit: cover;
   display: block;
-  pointer-events: none;
 }
 .model-badge {
   position: absolute;
