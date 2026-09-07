@@ -17,6 +17,13 @@ def connect():
     conn = sqlite3.connect(STATE / 'library.sqlite', timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute('CREATE TABLE IF NOT EXISTS images (id TEXT PRIMARY KEY, name TEXT, source TEXT, copy TEXT, sha256 TEXT)')
+    cursor = conn.execute("PRAGMA table_info(images)")
+    columns = {row['name'] for row in cursor.fetchall()}
+    if 'folder' not in columns:
+        conn.execute("ALTER TABLE images ADD COLUMN folder TEXT DEFAULT ''")
+    if 'favorite' not in columns:
+        conn.execute("ALTER TABLE images ADD COLUMN favorite INTEGER DEFAULT 0")
+    conn.execute('CREATE TABLE IF NOT EXISTS image_tags (image_id TEXT, tag TEXT, PRIMARY KEY(image_id, tag))')
     return conn
 
 
@@ -137,17 +144,21 @@ def add(path):
             temporary.unlink()
             raise RuntimeError('Copy verification failed')
         temporary.replace(target)
+    folder_name = source.parent.name or 'Main'
     with connect() as conn:
-        conn.execute('INSERT OR IGNORE INTO images VALUES (?,?,?,?,?)', (identifier, source.name, str(source), str(target), checksum))
+        conn.execute('INSERT OR IGNORE INTO images (id, name, source, copy, sha256, folder, favorite) VALUES (?,?,?,?,?,?,?)',
+                     (identifier, source.name, str(source), str(target), checksum, folder_name, 0))
     return get(identifier)
 
 
 def get(identifier):
     with connect() as conn:
         row = conn.execute('SELECT * FROM images WHERE id=?', (identifier,)).fetchone()
-    if row is None:
-        raise ValueError('Image not found')
-    data = dict(row)
+        if row is None:
+            raise ValueError('Image not found')
+        data = dict(row)
+        tags_rows = conn.execute('SELECT tag FROM image_tags WHERE image_id=? ORDER BY tag', (identifier,)).fetchall()
+        data['tags'] = [r['tag'] for r in tags_rows]
     copy_path = Path(data['copy'])
     if not copy_path.exists():
         relocated = STATE / 'originals' / copy_path.name
@@ -155,12 +166,19 @@ def get(identifier):
             data['copy'] = str(relocated)
             with connect() as conn:
                 conn.execute('UPDATE images SET copy=? WHERE id=?', (str(relocated), identifier))
+    if not data.get('folder'):
+        data['folder'] = Path(data['source']).parent.name or 'Main'
+    data['favorite'] = bool(data.get('favorite', 0))
     return data
 
 
 def all_images():
     with connect() as conn:
         rows = [dict(row) for row in conn.execute('SELECT * FROM images ORDER BY name')]
+        tags_rows = conn.execute('SELECT image_id, tag FROM image_tags ORDER BY tag').fetchall()
+        tags_map = {}
+        for r in tags_rows:
+            tags_map.setdefault(r['image_id'], []).append(r['tag'])
     for data in rows:
         copy_path = Path(data['copy'])
         if not copy_path.exists():
@@ -169,6 +187,10 @@ def all_images():
                 data['copy'] = str(relocated)
                 with connect() as conn:
                     conn.execute('UPDATE images SET copy=? WHERE id=?', (str(relocated), data['id']))
+        if not data.get('folder'):
+            data['folder'] = Path(data['source']).parent.name or 'Main'
+        data['favorite'] = bool(data.get('favorite', 0))
+        data['tags'] = tags_map.get(data['id'], [])
     return rows
 
 
@@ -208,11 +230,69 @@ def delete_images(identifiers):
                                         shutil.rmtree(r_dir, ignore_errors=True)
                                 except Exception:
                                     pass
-                # 4. Remove database record
+                # 4. Remove database records
+                conn.execute('DELETE FROM image_tags WHERE image_id=?', (identifier,))
                 conn.execute('DELETE FROM images WHERE id=?', (identifier,))
                 deleted.append(identifier)
     return deleted
 
+
+def set_favorite(identifier: str, favorite: bool):
+    fav_val = 1 if favorite else 0
+    with connect() as conn:
+        conn.execute('UPDATE images SET favorite=? WHERE id=?', (fav_val, identifier))
+    return get(identifier)
+
+
+def set_tags(identifier: str, tags: list[str]):
+    clean_tags = sorted(list({t.strip().lstrip('#').lower() for t in tags if t.strip()}))
+    with connect() as conn:
+        conn.execute('DELETE FROM image_tags WHERE image_id=?', (identifier,))
+        for t in clean_tags:
+            conn.execute('INSERT OR IGNORE INTO image_tags VALUES (?,?)', (identifier, t))
+    return get(identifier)
+
+
+def add_tags(identifiers: list[str], tags: list[str]):
+    clean_tags = sorted(list({t.strip().lstrip('#').lower() for t in tags if t.strip()}))
+    with connect() as conn:
+        for i_id in identifiers:
+            for t in clean_tags:
+                conn.execute('INSERT OR IGNORE INTO image_tags VALUES (?,?)', (i_id, t))
+    return {'count': len(identifiers), 'tags': clean_tags}
+
+
+def remove_tags(identifiers: list[str], tags: list[str]):
+    clean_tags = [t.strip().lstrip('#').lower() for t in tags if t.strip()]
+    with connect() as conn:
+        for i_id in identifiers:
+            for t in clean_tags:
+                conn.execute('DELETE FROM image_tags WHERE image_id=? AND tag=?', (i_id, t))
+    return {'count': len(identifiers), 'removed': clean_tags}
+
+
+def set_folder(identifiers: list[str], folder: str):
+    clean_folder = folder.strip() or 'Main'
+    with connect() as conn:
+        for i_id in identifiers:
+            conn.execute('UPDATE images SET folder=? WHERE id=?', (clean_folder, i_id))
+    return {'count': len(identifiers), 'folder': clean_folder}
+
+
+def get_library_metadata():
+    with connect() as conn:
+        tag_rows = conn.execute('SELECT tag, COUNT(image_id) as cnt FROM image_tags GROUP BY tag ORDER BY cnt DESC, tag ASC').fetchall()
+        folder_rows = conn.execute('SELECT folder, COUNT(id) as cnt FROM images GROUP BY folder ORDER BY cnt DESC, folder ASC').fetchall()
+        fav_row = conn.execute('SELECT COUNT(id) as cnt FROM images WHERE favorite=1').fetchone()
+
+    tags = [{'tag': r['tag'], 'count': r['cnt']} for r in tag_rows]
+    folders = [{'folder': (r['folder'] or 'Main'), 'count': r['cnt']} for r in folder_rows]
+    favorites_count = fav_row['cnt'] if fav_row else 0
+    return {
+        'tags': tags,
+        'folders': folders,
+        'favorites_count': favorites_count
+    }
 
 
 def measure(path):

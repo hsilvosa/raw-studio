@@ -311,9 +311,16 @@ $('toggle-library').onclick = () => {
   setTimeout(updateZoomTransform, 220);
 };
 
-// --- Library Selection & Photo Deletion ---
+// --- Library Selection, Filters & Organization ---
 let librarySelecting = false;
 const selectedLibraryImages = new Set();
+let libSearchQuery = '';
+let selectedFolderFilter = '';
+let selectedTagFilter = '';
+let favoriteFilterOnly = false;
+let libraryMetadata = { tags: [], folders: [], favorites_count: 0 };
+let activeTagModalTarget = null; // null for batch, or single image object
+let activeFolderModalTarget = null;
 
 function setLibrarySelecting(enabled) {
   librarySelecting = enabled;
@@ -329,6 +336,66 @@ function updateLibrarySelectionUI() {
   const count = selectedLibraryImages.size;
   $('lib-delete-btn').textContent = `Delete (${count})`;
   $('lib-delete-btn').disabled = count === 0 || busy;
+  $('lib-batch-tag').disabled = count === 0 || busy;
+  $('lib-batch-folder').disabled = count === 0 || busy;
+}
+
+async function fetchLibraryMetadata() {
+  try {
+    libraryMetadata = await api('/library/metadata');
+    $('fav-count').textContent = libraryMetadata.favorites_count || 0;
+
+    // Update folder dropdown
+    const folderSelect = $('lib-folder-select');
+    const prevVal = selectedFolderFilter;
+    folderSelect.replaceChildren();
+    const optAll = document.createElement('option');
+    optAll.value = '';
+    optAll.textContent = `All folders (${images.length})`;
+    folderSelect.append(optAll);
+    for (const f of libraryMetadata.folders || []) {
+      const opt = document.createElement('option');
+      opt.value = f.folder;
+      opt.textContent = `${f.folder} (${f.count})`;
+      folderSelect.append(opt);
+    }
+    folderSelect.value = prevVal;
+
+    // Update tag chips in library bar
+    const tagChipsWrap = $('lib-tag-chips');
+    tagChipsWrap.replaceChildren();
+    for (const t of libraryMetadata.tags || []) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'lib-chip' + (selectedTagFilter === t.tag ? ' active' : '');
+      chip.textContent = `#${t.tag} (${t.count})`;
+      chip.title = `Filter by #${t.tag}`;
+      chip.onclick = () => {
+        if (selectedTagFilter === t.tag) {
+          selectedTagFilter = '';
+        } else {
+          selectedTagFilter = t.tag;
+          favoriteFilterOnly = false;
+        }
+        updateFilterChipsUI();
+        renderLibraryItems();
+      };
+      tagChipsWrap.append(chip);
+    }
+  } catch (e) {
+    console.error('Failed to load library metadata', e);
+  }
+}
+
+function updateFilterChipsUI() {
+  const allChip = $('library-chips-bar')?.querySelector('[data-filter="all"]');
+  const favChip = $('library-chips-bar')?.querySelector('[data-filter="favorites"]');
+  if (allChip) allChip.classList.toggle('active', !favoriteFilterOnly && !selectedTagFilter);
+  if (favChip) favChip.classList.toggle('active', favoriteFilterOnly);
+  const tagChips = $('lib-tag-chips')?.querySelectorAll('.lib-chip');
+  tagChips?.forEach(c => {
+    c.classList.toggle('active', selectedTagFilter && c.textContent.startsWith(`#${selectedTagFilter} `));
+  });
 }
 
 function deletePhotos(imageIds) {
@@ -368,6 +435,96 @@ function deletePhotos(imageIds) {
   });
 }
 
+// Modal dialogs for tags and folders
+function openTagModal(targetImage = null) {
+  activeTagModalTarget = targetImage;
+  const isBatch = targetImage === null;
+  const count = isBatch ? selectedLibraryImages.size : 1;
+  $('tag-dialog-title').textContent = isBatch ? `Tag ${count} Photos` : `Tags for ${targetImage.name}`;
+  $('tag-dialog-desc').textContent = isBatch
+    ? `Add tags to ${count} selected photos (comma separated):`
+    : 'Enter tags separated by commas:';
+  $('tag-dialog-input').value = isBatch ? '' : (targetImage.tags || []).join(', ');
+
+  const suggestions = $('quick-tags-suggestions');
+  suggestions.replaceChildren();
+  for (const t of libraryMetadata.tags || []) {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'suggestion-pill';
+    pill.textContent = '#' + t.tag;
+    pill.onclick = () => {
+      const cur = $('tag-dialog-input').value.split(',').map(s => s.trim()).filter(Boolean);
+      if (!cur.includes(t.tag)) {
+        cur.push(t.tag);
+        $('tag-dialog-input').value = cur.join(', ');
+      }
+    };
+    suggestions.append(pill);
+  }
+
+  $('tag-dialog').showModal();
+  $('tag-dialog-input').focus();
+}
+
+function openFolderModal(targetImage = null) {
+  activeFolderModalTarget = targetImage;
+  const isBatch = targetImage === null;
+  const count = isBatch ? selectedLibraryImages.size : 1;
+  $('folder-dialog-input').value = isBatch ? '' : (targetImage.folder || '');
+
+  const suggestions = $('quick-folders-suggestions');
+  suggestions.replaceChildren();
+  for (const f of libraryMetadata.folders || []) {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'suggestion-pill';
+    pill.textContent = '📁 ' + f.folder;
+    pill.onclick = () => {
+      $('folder-dialog-input').value = f.folder;
+    };
+    suggestions.append(pill);
+  }
+
+  $('folder-dialog').showModal();
+  $('folder-dialog-input').focus();
+}
+
+$('close-tag-dialog').onclick = () => $('tag-dialog').close();
+$('cancel-tag-dialog').onclick = () => $('tag-dialog').close();
+$('save-tag-dialog').onclick = async () => {
+  const input = $('tag-dialog-input').value;
+  const tagList = input.split(',').map(t => t.trim().replace(/^#/, '')).filter(Boolean);
+  $('tag-dialog').close();
+
+  if (activeTagModalTarget) {
+    await api(`/images/${activeTagModalTarget.id}/tags`, { tags: tagList });
+    activeTagModalTarget.tags = tagList;
+  } else {
+    const ids = [...selectedLibraryImages];
+    if (ids.length && tagList.length) {
+      await api('/images/batch/tags', { image_ids: ids, add_tags: tagList, remove_tags: [] });
+    }
+  }
+  await refresh();
+  report('Tags updated.');
+};
+
+$('close-folder-dialog').onclick = () => $('folder-dialog').close();
+$('cancel-folder-dialog').onclick = () => $('folder-dialog').close();
+$('save-folder-dialog').onclick = async () => {
+  const folderName = ($('folder-dialog-input').value || '').trim() || 'Main';
+  $('folder-dialog').close();
+
+  const ids = activeFolderModalTarget ? [activeFolderModalTarget.id] : [...selectedLibraryImages];
+  if (ids.length) {
+    await api('/images/batch/folder', { image_ids: ids, folder: folderName });
+  }
+  await refresh();
+  report(`Moved to folder ${folderName}.`);
+};
+
+// Selection Bar wiring
 $('lib-select-mode').onclick = () => setLibrarySelecting(!librarySelecting);
 $('lib-cancel').onclick = () => setLibrarySelecting(false);
 $('lib-select-all').onclick = () => {
@@ -383,16 +540,73 @@ $('lib-select-none').onclick = () => {
 $('lib-delete-btn').onclick = () => {
   if (selectedLibraryImages.size > 0) deletePhotos([...selectedLibraryImages]);
 };
+$('lib-batch-tag').onclick = () => {
+  if (selectedLibraryImages.size > 0) openTagModal(null);
+};
+$('lib-batch-folder').onclick = () => {
+  if (selectedLibraryImages.size > 0) openFolderModal(null);
+};
+
+// Search & Filter wiring
+$('lib-search').oninput = () => {
+  libSearchQuery = $('lib-search').value;
+  $('lib-search-clear').hidden = !libSearchQuery;
+  renderLibraryItems();
+};
+$('lib-search-clear').onclick = () => {
+  $('lib-search').value = '';
+  libSearchQuery = '';
+  $('lib-search-clear').hidden = true;
+  renderLibraryItems();
+};
+$('lib-folder-select').onchange = () => {
+  selectedFolderFilter = $('lib-folder-select').value;
+  renderLibraryItems();
+};
+
+const chipAll = $('library-chips-bar')?.querySelector('[data-filter="all"]');
+if (chipAll) {
+  chipAll.onclick = () => {
+    favoriteFilterOnly = false;
+    selectedTagFilter = '';
+    updateFilterChipsUI();
+    renderLibraryItems();
+  };
+}
+const chipFav = $('library-chips-bar')?.querySelector('[data-filter="favorites"]');
+if (chipFav) {
+  chipFav.onclick = () => {
+    favoriteFilterOnly = !favoriteFilterOnly;
+    selectedTagFilter = '';
+    updateFilterChipsUI();
+    renderLibraryItems();
+  };
+}
 
 function renderLibraryItems() {
   $('images').replaceChildren();
-  for (const im of images) {
+  const query = libSearchQuery.toLowerCase().trim();
+
+  const filtered = images.filter(im => {
+    if (favoriteFilterOnly && !im.favorite) return false;
+    if (selectedFolderFilter && im.folder !== selectedFolderFilter) return false;
+    if (selectedTagFilter && (!im.tags || !im.tags.includes(selectedTagFilter))) return false;
+    if (query) {
+      const matchName = im.name.toLowerCase().includes(query);
+      const matchFolder = (im.folder || '').toLowerCase().includes(query);
+      const matchTags = (im.tags || []).some(t => t.toLowerCase().includes(query));
+      if (!matchName && !matchFolder && !matchTags) return false;
+    }
+    return true;
+  });
+
+  for (const im of filtered) {
     const isLibSel = selectedLibraryImages.has(im.id);
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'photo' + (current?.id === im.id ? ' active' : '') + (isLibSel ? ' lib-selected' : '');
 
-    // Multi-select checkbox
+    // Multi-select checkbox or Favorite & Delete buttons
     if (librarySelecting) {
       const check = document.createElement('input');
       check.type = 'checkbox';
@@ -407,6 +621,26 @@ function renderLibraryItems() {
       };
       b.append(check);
     } else {
+      // Favorite Star button
+      const favBtn = document.createElement('button');
+      favBtn.type = 'button';
+      favBtn.className = 'photo-fav-btn' + (im.favorite ? ' is-fav' : '');
+      favBtn.innerHTML = im.favorite ? '★' : '☆';
+      favBtn.title = im.favorite ? 'Remove from favorites' : 'Mark as favorite';
+      favBtn.onclick = async (e) => {
+        e.stopPropagation();
+        const nextFav = !im.favorite;
+        im.favorite = nextFav;
+        favBtn.classList.toggle('is-fav', nextFav);
+        favBtn.innerHTML = nextFav ? '★' : '☆';
+        await api(`/images/${im.id}/favorite`, { favorite: nextFav });
+        fetchLibraryMetadata();
+        if (favoriteFilterOnly && !nextFav) {
+          renderLibraryItems();
+        }
+      };
+      b.append(favBtn);
+
       // Individual quick delete button on hover
       const delBtn = document.createElement('button');
       delBtn.type = 'button';
@@ -423,10 +657,45 @@ function renderLibraryItems() {
     const img = new Image();
     img.src = '/api/images/' + im.id + '/preview';
     img.alt = im.name;
+
     const nameSpan = document.createElement('span');
     nameSpan.className = 'photo-name';
     nameSpan.textContent = im.name;
-    b.append(img, nameSpan);
+
+    const folderSpan = document.createElement('span');
+    folderSpan.className = 'photo-folder';
+    folderSpan.textContent = '📁 ' + (im.folder || 'Main');
+    folderSpan.title = `Folder: ${im.folder || 'Main'}`;
+
+    const tagsDiv = document.createElement('div');
+    tagsDiv.className = 'photo-tags';
+    for (const t of (im.tags || [])) {
+      const tagSpan = document.createElement('span');
+      tagSpan.className = 'photo-tag';
+      tagSpan.textContent = '#' + t;
+      tagSpan.title = `Filter by #${t}`;
+      tagSpan.onclick = (e) => {
+        e.stopPropagation();
+        selectedTagFilter = (selectedTagFilter === t ? '' : t);
+        favoriteFilterOnly = false;
+        updateFilterChipsUI();
+        renderLibraryItems();
+      };
+      tagsDiv.append(tagSpan);
+    }
+
+    const addTagBtn = document.createElement('button');
+    addTagBtn.type = 'button';
+    addTagBtn.className = 'btn-add-tag-inline';
+    addTagBtn.textContent = '+';
+    addTagBtn.title = 'Manage tags';
+    addTagBtn.onclick = (e) => {
+      e.stopPropagation();
+      openTagModal(im);
+    };
+    tagsDiv.append(addTagBtn);
+
+    b.append(img, nameSpan, folderSpan, tagsDiv);
 
     b.onclick = () => {
       if (librarySelecting) {
@@ -449,6 +718,8 @@ function renderLibraryItems() {
 async function refresh() {
   images = await api('/images');
   $('count').textContent = images.length;
+  await fetchLibraryMetadata();
+  updateFilterChipsUI();
   renderLibraryItems();
   if (!current && images.length) select(images[0]);
 }

@@ -118,6 +118,24 @@ class DeleteImagesRequest(BaseModel):
     image_ids: list[str] = Field(min_length=1)
 
 
+class SetFavoriteRequest(BaseModel):
+    favorite: bool
+
+
+class SetTagsRequest(BaseModel):
+    tags: list[str] = Field(default_factory=list)
+
+
+class BatchTagsRequest(BaseModel):
+    image_ids: list[str] = Field(min_length=1)
+    add_tags: list[str] = Field(default_factory=list)
+    remove_tags: list[str] = Field(default_factory=list)
+
+
+class BatchFolderRequest(BaseModel):
+    image_ids: list[str] = Field(min_length=1)
+    folder: str
+
 
 class DevelopRequest(BaseModel):
     image_id: str
@@ -361,12 +379,42 @@ def delete_images_route(request: DeleteImagesRequest):
     return {'deleted': deleted, 'count': len(deleted), 'message': f'Removed {len(deleted)} photo(s) from library'}
 
 
+@app.post('/api/images/batch/tags')
+def batch_image_tags_route(req: BatchTagsRequest):
+    if req.add_tags:
+        library.add_tags(req.image_ids, req.add_tags)
+    if req.remove_tags:
+        library.remove_tags(req.image_ids, req.remove_tags)
+    return {'count': len(req.image_ids), 'message': f'Updated tags for {len(req.image_ids)} photo(s)'}
+
+
+@app.post('/api/images/batch/folder')
+def batch_image_folder_route(req: BatchFolderRequest):
+    res = library.set_folder(req.image_ids, req.folder)
+    return {'count': len(req.image_ids), 'folder': res['folder'], 'message': f'Moved {len(req.image_ids)} photo(s) to folder {res["folder"]}'}
+
+
+@app.get('/api/library/metadata')
+def library_metadata_route():
+    return library.get_library_metadata()
+
+
 @app.delete('/api/images/{identifier}')
 def delete_single_image(identifier: str):
     deleted = library.delete_images([identifier])
     if not deleted:
         raise HTTPException(404, 'Image not found')
     return {'deleted': deleted, 'message': 'Photo removed from library'}
+
+
+@app.post('/api/images/{identifier}/favorite')
+def set_image_favorite_route(identifier: str, req: SetFavoriteRequest):
+    return library.set_favorite(identifier, req.favorite)
+
+
+@app.post('/api/images/{identifier}/tags')
+def set_image_tags_route(identifier: str, req: SetTagsRequest):
+    return library.set_tags(identifier, req.tags)
 
 
 

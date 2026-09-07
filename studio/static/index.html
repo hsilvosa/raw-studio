@@ -17,14 +17,30 @@
       <div class="library-header">
         <div class="section-title">LIBRARY <span id="count">0</span></div>
         <div class="library-header-actions">
-          <button type="button" id="lib-select-mode" class="btn-subtle" title="Select multiple photos to delete">Select</button>
+          <button type="button" id="lib-select-mode" class="btn-subtle" title="Select multiple photos to delete, tag, or organize">Select</button>
           <button type="button" id="toggle-library" class="btn-subtle" title="Toggle expanded grid view">⛶ Expand</button>
         </div>
+      </div>
+      <div class="library-search-wrap">
+        <input type="text" id="lib-search" placeholder="Filter photos or tags..." class="lib-search-input" spellcheck="false">
+        <button type="button" id="lib-search-clear" class="btn-clear-search" hidden title="Clear search">✕</button>
+      </div>
+      <div class="library-filter-row">
+        <select id="lib-folder-select" class="lib-folder-select" title="Filter by folder">
+          <option value="">All folders</option>
+        </select>
+      </div>
+      <div class="library-chips-bar" id="library-chips-bar">
+        <button type="button" class="lib-chip active" data-filter="all">All</button>
+        <button type="button" class="lib-chip" data-filter="favorites" title="Show only starred photos">★ Favorites (<span id="fav-count">0</span>)</button>
+        <div class="lib-tag-chips" id="lib-tag-chips"></div>
       </div>
       <div class="library-selection-bar" id="library-selection-bar" hidden>
         <div class="library-selection-actions">
           <button type="button" id="lib-select-all" class="btn-mini">All</button>
           <button type="button" id="lib-select-none" class="btn-mini">Clear</button>
+          <button type="button" id="lib-batch-tag" class="btn-mini" disabled title="Tag selected photos">+ Tag</button>
+          <button type="button" id="lib-batch-folder" class="btn-mini" disabled title="Move selected to folder">Folder</button>
           <button type="button" id="lib-cancel" class="btn-mini">Cancel</button>
         </div>
         <button type="button" id="lib-delete-btn" class="btn-mini btn-danger" disabled>Delete (0)</button>
@@ -204,6 +220,39 @@
     </div>
     <div id="profile-info-list" class="profile-info-list"></div>
   </dialog>
+
+  <dialog id="tag-dialog" class="mini-modal">
+    <div class="dialog-head">
+      <h3 id="tag-dialog-title">Manage Tags</h3>
+      <button type="button" id="close-tag-dialog" class="btn-icon-close">✕</button>
+    </div>
+    <div class="mini-modal-body">
+      <p id="tag-dialog-desc">Enter tags separated by commas:</p>
+      <input type="text" id="tag-dialog-input" class="lib-modal-input" placeholder="e.g. retrato, favorita, exterior">
+      <div class="quick-tags-suggestions" id="quick-tags-suggestions"></div>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" id="cancel-tag-dialog" class="btn-subtle">Cancel</button>
+      <button type="button" id="save-tag-dialog" class="primary">Apply</button>
+    </div>
+  </dialog>
+
+  <dialog id="folder-dialog" class="mini-modal">
+    <div class="dialog-head">
+      <h3>Assign to Folder</h3>
+      <button type="button" id="close-folder-dialog" class="btn-icon-close">✕</button>
+    </div>
+    <div class="mini-modal-body">
+      <p>Enter folder / collection name:</p>
+      <input type="text" id="folder-dialog-input" class="lib-modal-input" placeholder="e.g. Sesion-1, Vacaciones, Retratos">
+      <div class="quick-folders-suggestions" id="quick-folders-suggestions"></div>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" id="cancel-folder-dialog" class="btn-subtle">Cancel</button>
+      <button type="button" id="save-folder-dialog" class="primary">Move</button>
+    </div>
+  </dialog>
+
   <script src="/app.js"></script>
 </body>
 </html>

@@ -1303,4 +1303,243 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(2px); 
   .viewer { height: 50vh; min-height: 320px; }
 }
 
+/* --- Library Search, Folder & Tag Organization --- */
+.library-search-wrap {
+  position: relative;
+  margin-bottom: 7px;
+  flex-shrink: 0;
+}
+.lib-search-input {
+  width: 100%;
+  font-size: 11px;
+  padding: 6px 24px 6px 9px;
+  background: #17191b;
+  border: 1px solid #33383d;
+  border-radius: 5px;
+  color: #eee;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+.lib-search-input:focus {
+  border-color: var(--accent);
+  outline: none;
+  background: #131516;
+}
+.btn-clear-search {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #777;
+  font-size: 10px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.btn-clear-search:hover { color: #fff; }
+
+.library-filter-row {
+  margin-bottom: 7px;
+  flex-shrink: 0;
+}
+.lib-folder-select {
+  width: 100%;
+  font-size: 11px;
+  padding: 5px 8px;
+  background: #1c1f22;
+  border: 1px solid #33383d;
+  border-radius: 5px;
+  color: #ccc;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.lib-folder-select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.library-chips-bar {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+.library-chips-bar::-webkit-scrollbar { display: none; }
+.lib-chip {
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  background: #212528;
+  border: 1px solid #363b40;
+  border-radius: 12px;
+  color: #bbb;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+.lib-chip:hover {
+  background: #2b3035;
+  color: #fff;
+  border-color: #4c535a;
+}
+.lib-chip.active {
+  background: #2e2819;
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.lib-tag-chips {
+  display: inline-flex;
+  gap: 5px;
+}
+
+/* Photo Card Additions: Star, Folder, Tags */
+.photo-fav-btn {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  background: rgba(18, 20, 22, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 4;
+}
+.photo:hover .photo-fav-btn {
+  opacity: 1;
+}
+.photo-fav-btn:hover {
+  color: #f7d57f;
+  background: rgba(25, 22, 14, 0.9);
+  border-color: #d3b789;
+  transform: scale(1.1);
+}
+.photo-fav-btn.is-fav {
+  color: #f5be38;
+  background: rgba(30, 24, 10, 0.88);
+  border-color: #d3b789;
+  text-shadow: 0 0 6px rgba(245, 190, 56, 0.6);
+}
+.library.selecting .photo-fav-btn {
+  display: none;
+}
+
+.photo-folder {
+  display: block;
+  font-size: 9.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.photo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 4px;
+}
+.photo-tag {
+  font-size: 8.5px;
+  background: #181b1d;
+  border: 1px solid #31363a;
+  color: #aab;
+  padding: 1px 5px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+.photo-tag:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.btn-add-tag-inline {
+  font-size: 8.5px;
+  background: transparent;
+  border: 1px dashed #40464b;
+  color: #888;
+  padding: 0 4px;
+  border-radius: 3px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.btn-add-tag-inline:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Mini Modals for Tagging and Folder Assignment */
+.mini-modal {
+  background: #1e2225;
+  color: inherit;
+  border: 1px solid #3c4246;
+  border-radius: 8px;
+  padding: 18px 20px 14px;
+  width: min(380px, 92vw);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+.mini-modal h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #eee;
+}
+.mini-modal-body {
+  margin: 12px 0 16px;
+}
+.mini-modal-body p {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+.lib-modal-input {
+  width: 100%;
+  font-size: 12px;
+  padding: 8px 10px;
+  background: #141618;
+  border: 1px solid #383e42;
+  border-radius: 5px;
+  color: #eee;
+  box-sizing: border-box;
+}
+.lib-modal-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.quick-tags-suggestions, .quick-folders-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+  max-height: 80px;
+  overflow-y: auto;
+}
+.suggestion-pill {
+  font-size: 10px;
+  padding: 2px 7px;
+  background: #252a2d;
+  border: 1px solid #3d4348;
+  border-radius: 4px;
+  color: #ccc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.suggestion-pill:hover {
+  background: #31383d;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 
