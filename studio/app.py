@@ -157,20 +157,27 @@ def develop(job_id, request):
 
     model_name = None
     proposal = None
+    model_warning = None
     if request.use_model:
         update(job_id, message='Local model is proposing adjustments')
         # Render a small model input through darktable, never an image generator.
         model_preview = folder / 'model-input.png'
         engine.export(source, stack, model_preview, 768)
-        proposal, model_name = model.propose(model_preview, stack, telemetry, profile['title'] + '. ' + request.intent)
-        stack = merge(stack, proposal)
-        update(job_id, message='Applying model recipe in darktable')
-        candidate = folder / 'adapted.png'
-        engine.export(source, stack, candidate, request.width)
-        reason = proposal.reason
+        try:
+            proposal, model_name = model.propose(model_preview, stack, telemetry, profile['title'] + '. ' + request.intent)
+            stack = merge(stack, proposal)
+            update(job_id, message='Applying model recipe in darktable')
+            adapted_candidate = folder / 'adapted.png'
+            engine.export(source, stack, adapted_candidate, request.width)
+            candidate = adapted_candidate
+            reason = proposal.reason
+        except Exception as exc:
+            model_warning = f'Modelo local no pudo aplicarse ({exc}); se mantuvo el revelado adaptativo.'
 
     after = adaptation.analyze_scene(candidate)
     warnings = []
+    if model_warning:
+        warnings.append(model_warning)
     if after['white_fraction'] > .02:
         warnings.append('Highlights are near white: check specular reflections and signs.')
     if after['black_fraction'] > .15:

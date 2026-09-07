@@ -8,8 +8,12 @@ from .settings import ROOT
 
 # Conservative artistic limits, narrower than darktable's physical ranges.
 LIMITS = {
-    'exposure': {'exposure': (-2., 4.)},
-    'sigmoid': {'middle_grey_contrast': (1., 2.), 'display_black_target': (.015, .6)},
+    'exposure': {'exposure': (-2., 4.), 'black': (-.01, .01)},
+    'sigmoid': {
+        'middle_grey_contrast': (1., 2.),
+        'display_black_target': (.015, .6),
+        'contrast_skewness': (-.5, .5),
+    },
     'colorbalancergb': {
         'shadows_Y': (-.1, .15), 'highlights_Y': (-.15, .1),
         'shadows_C': (0., .025), 'shadows_H': (0., 360.),
@@ -17,8 +21,14 @@ LIMITS = {
         'highlights_C': (0., .015), 'highlights_H': (0., 360.),
         'global_C': (0., .008), 'global_H': (0., 360.),
         'chroma_global': (-.5, .3), 'saturation_global': (-1., .3),
+        'saturation_highlights': (-1., .5), 'saturation_shadows': (-1., .5),
         'contrast': (-.08, .12), 'vibrance': (-.3, .3)},
-    'bilat': {'detail': (0., .4)},
+    'bilat': {
+        'detail': (0., .4),
+        'sigma_r': (0.01, 1.),
+        'sigma_s': (0.01, 1.),
+        'midtone': (0., 1.),
+    },
     'sharpen': {'amount': (0., 1.), 'radius': (.4, 1.2), 'threshold': (.5, 2.)},
 }
 

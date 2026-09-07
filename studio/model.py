@@ -1,5 +1,6 @@
 import base64
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -82,6 +83,39 @@ def ensure_server():
     return status()['available']
 
 
+def sanitize_proposal(value):
+    """Sanitize raw LLM output to strictly match LIMITS.
+    Clamps numeric parameters into valid conservative ranges and drops disallowed modules
+    or fields, preventing spurious failures due to minor rounding or extra fields.
+    """
+    if not isinstance(value, dict):
+        return value
+    adjustments = value.get('adjustments')
+    if not isinstance(adjustments, list):
+        return value
+    sanitized_adjs = []
+    seen = set()
+    for adj in adjustments:
+        if not isinstance(adj, dict):
+            continue
+        op = adj.get('operation')
+        if op not in LIMITS or op in seen:
+            continue
+        seen.add(op)
+        raw_params = adj.get('params', {})
+        if not isinstance(raw_params, dict):
+            continue
+        valid_params = {}
+        for k, v in raw_params.items():
+            if k in LIMITS[op] and isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v):
+                min_v, max_v = LIMITS[op][k]
+                valid_params[k] = round(max(min_v, min(max_v, float(v))), 4)
+        if valid_params:
+            sanitized_adjs.append({'operation': op, 'params': valid_params})
+    value['adjustments'] = sanitized_adjs
+    return value
+
+
 def propose(preview, stack, measurements, intent):
     ensure_server()
     system = (
@@ -110,5 +144,6 @@ def propose(preview, stack, measurements, intent):
         })
         response.raise_for_status()
     value = json.loads(response.json()['choices'][0]['message']['content'])
-    return validate_proposal(value), name
+    sanitized = sanitize_proposal(value)
+    return validate_proposal(sanitized), name
 
