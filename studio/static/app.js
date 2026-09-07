@@ -241,15 +241,46 @@ function toggleFullPage(forceState) {
 }
 $('full-page').onclick = () => toggleFullPage();
 
-// Horizontal mouse wheel scrolling for developed profiles bar
+// Horizontal mouse wheel scrolling and drag-to-scroll for developed profiles bar
 const resultsBar = $('results');
+let isResultsDragging = false;
+let resultsStartX = 0;
+let resultsScrollLeft = 0;
+let resultsHasDragged = false;
+
 if (resultsBar) {
   resultsBar.addEventListener('wheel', (e) => {
-    if (e.deltaY !== 0) {
+    const rawDelta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX;
+    if (rawDelta !== 0) {
       e.preventDefault();
-      resultsBar.scrollLeft += e.deltaY;
+      // Accelerated multiplier (3.2x) so scrolling left-to-right is swift and responsive
+      resultsBar.scrollLeft += rawDelta * 3.2;
     }
   }, { passive: false });
+
+  resultsBar.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    isResultsDragging = true;
+    resultsHasDragged = false;
+    resultsStartX = e.pageX - resultsBar.offsetLeft;
+    resultsScrollLeft = resultsBar.scrollLeft;
+    resultsBar.classList.add('dragging');
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!isResultsDragging) return;
+    const x = e.pageX - resultsBar.offsetLeft;
+    const walk = (x - resultsStartX) * 1.6;
+    if (Math.abs(walk) > 4) resultsHasDragged = true;
+    resultsBar.scrollLeft = resultsScrollLeft - walk;
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isResultsDragging) {
+      isResultsDragging = false;
+      resultsBar.classList.remove('dragging');
+    }
+  });
 }
 
 // Keyboard shortcuts for zooming and full page
@@ -449,13 +480,14 @@ function select(im) {
 function showResult(result) {
   chosen = result;
   $('after').src = result.url;
-  $('after-label').textContent = result.recipe.profile_title;
+  const hasModel = Boolean(result.recipe?.model || result.recipe?.proposal);
+  $('after-label').textContent = result.recipe.profile_title + (hasModel ? ' · [IA]' : '');
   const warnings = result.recipe.warnings && result.recipe.warnings.length ? ' ' + result.recipe.warnings.join(' ') : '';
   $('reason').textContent = (result.recipe.reason || '') + warnings;
   $('recipe').textContent = JSON.stringify(result.recipe.stack, null, 2);
   for (const b of $('results').children) {
     const titleEl = b.querySelector('.result-title');
-    const isActive = (titleEl ? titleEl.textContent : b.textContent) === result.recipe.profile_title;
+    const isActive = (titleEl ? titleEl.textContent : b.textContent).includes(result.recipe.profile_title);
     b.classList.toggle('active', isActive);
     if (isActive) {
       b.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
@@ -484,15 +516,42 @@ function drawResults() {
   $('results').replaceChildren();
   for (const r of results.get(current?.id) || []) {
     const b = document.createElement('button');
-    b.className = 'result' + (chosen?.render_id === r.render_id ? ' active' : '');
+    const hasModel = Boolean(r.recipe?.model || r.recipe?.proposal);
+    b.className = 'result' + (chosen?.render_id === r.render_id ? ' active' : '') + (hasModel ? ' has-model' : '');
+
+    const thumbWrap = document.createElement('div');
+    thumbWrap.className = 'result-thumb-wrap';
     const img = new Image();
     img.src = r.url;
     img.alt = r.recipe.profile_title;
+    thumbWrap.append(img);
+
+    if (hasModel) {
+      const badge = document.createElement('span');
+      badge.className = 'model-badge';
+      badge.textContent = 'IA';
+      badge.title = 'Adapted with local model';
+      thumbWrap.append(badge);
+    }
+
     const title = document.createElement('span');
     title.className = 'result-title';
     title.textContent = r.recipe.profile_title;
-    b.append(img, title);
-    b.onclick = () => showResult(r);
+    if (hasModel) {
+      const tag = document.createElement('span');
+      tag.className = 'result-model-tag';
+      tag.textContent = 'IA';
+      title.prepend(tag);
+    }
+
+    b.append(thumbWrap, title);
+    b.onclick = (e) => {
+      if (resultsHasDragged) {
+        e.preventDefault();
+        return;
+      }
+      showResult(r);
+    };
     $('results').append(b);
   }
 }
