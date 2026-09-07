@@ -547,19 +547,58 @@ def open_in_file_manager(target: Path):
     folder_str = str(folder.resolve())
 
     if sys.platform == 'win32':
+        import ctypes
+        from ctypes import wintypes
+        user32 = ctypes.windll.user32
+
+        # 1. Attach thread to interactive user desktop if running in an isolated desktop
+        h_desk = None
+        try:
+            h_desk = user32.OpenDesktopW('Default', 0, False, 0x01ff)
+            if h_desk:
+                user32.SetThreadDesktop(h_desk)
+        except Exception:
+            pass
+
+        # 2. Launch explorer
         if target.is_file():
             try:
                 subprocess.Popen(f'explorer.exe /select,"{str(target.resolve())}"', shell=True)
             except Exception:
                 pass
         try:
-            subprocess.Popen(f'explorer.exe "{folder_str}"', shell=True)
+            subprocess.Popen(f'explorer.exe /n,"{folder_str}"', shell=True)
         except Exception:
             pass
         try:
             os.startfile(folder_str)
         except Exception:
             pass
+
+        # 3. Bring matching Explorer window to the foreground
+        try:
+            target_name = folder.name.lower()
+            def cb(hwnd, lparam):
+                length = user32.GetWindowTextLengthW(hwnd)
+                if length > 0:
+                    buff = ctypes.create_unicode_buffer(length + 1)
+                    user32.GetWindowTextW(hwnd, buff, length + 1)
+                    title = buff.value.lower()
+                    if target_name in title and 'explorador' in title:
+                        user32.ShowWindow(hwnd, 9)
+                        user32.SwitchToThisWindow(hwnd, True)
+                        user32.SetForegroundWindow(hwnd)
+                return True
+            cb_func = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)(cb)
+            user32.EnumWindows(cb_func, 0)
+        except Exception:
+            pass
+
+        if h_desk:
+            try:
+                user32.CloseDesktop(h_desk)
+            except Exception:
+                pass
         return True
     elif sys.platform == 'darwin':
         if target.is_file():
@@ -570,6 +609,7 @@ def open_in_file_manager(target: Path):
     else:
         subprocess.Popen(['xdg-open', folder_str])
         return True
+
 
 
 

@@ -1198,8 +1198,8 @@ if ($('copy-export-path')) {
       try {
         await navigator.clipboard.writeText(text);
         const btn = $('copy-export-path');
-        btn.textContent = '✅ Copied!';
-        setTimeout(() => { if ($('copy-export-path')) $('copy-export-path').textContent = '📋 Copy'; }, 2000);
+        btn.textContent = 'Copied';
+        setTimeout(() => { if ($('copy-export-path')) $('copy-export-path').textContent = 'Copy'; }, 2000);
       } catch (_) {}
     }
   };
