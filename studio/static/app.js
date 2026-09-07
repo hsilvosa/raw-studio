@@ -484,9 +484,9 @@ function showResult(result) {
   $('reason').textContent = (result.recipe.reason || '') + warnings;
   $('recipe').textContent = JSON.stringify(result.recipe.stack, null, 2);
   for (const b of $('results').children) {
-    const titleEl = b.querySelector('.result-title');
-    const isActive = (titleEl ? titleEl.textContent : b.textContent).includes(result.recipe.profile_title);
-    b.classList.toggle('active', isActive);
+    const isActive = (result.render_id && b.dataset.renderId === result.render_id) ||
+                     (result.url && b.dataset.url === result.url);
+    b.classList.toggle('active', Boolean(isActive));
     if (isActive) {
       b.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     }
@@ -501,6 +501,8 @@ function drawResults() {
   for (const r of results.get(current?.id) || []) {
     const b = document.createElement('button');
     const hasModel = Boolean(r.recipe?.model || r.recipe?.proposal);
+    b.dataset.renderId = r.render_id || '';
+    b.dataset.url = r.url || '';
     b.className = 'result' + (chosen?.render_id === r.render_id ? ' active' : '') + (hasModel ? ' has-model' : '');
 
     const thumbWrap = document.createElement('div');
