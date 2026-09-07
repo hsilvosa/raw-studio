@@ -116,19 +116,33 @@ def sanitize_proposal(value):
     return value
 
 
-def propose(preview, stack, measurements, intent):
+def propose(preview, stack, measurements, intent, is_prompt_style=False):
     ensure_server()
-    system = (
-        'You are a master photographic colorist controlling darktable. Analyze the provided image '
-        'and telemetry (white balance, skin tones, dynamic range, noise). Return ONLY a JSON object '
-        'with reason (concise professional Spanish explanation of your artistic and technical decisions) '
-        'and adjustments (array of {operation,params}). '
-        'Propose ABSOLUTE numeric parameter values, not deltas. Never output images, code, '
-        'paths, commands, masks, tool calls or binary parameters. Keep the requested style, '
-        'preserve plausible healthy skin, protect highlights from clipping, and maintain contrast. '
-        'Do not brighten night scenes into daylight. At most 6 module adjustments. You may leave adjustments empty. '
-        'Use only these allowed modules, fields and inclusive bounds: ' + json.dumps(LIMITS)
-    )
+    if is_prompt_style:
+        system = (
+            'You are a world-class creative photographic colorist. Your mission is to DESIGN a complete, original '
+            'color grading and tonal aesthetic from scratch for this image, strictly expressing the user prompt: "' + intent + '". '
+            'Analyze the image composition, light, and telemetry. Formulate a rich photographic palette: set shadows and highlights '
+            'color wheels (shadows_H, shadows_C, highlights_H, highlights_C, midtones_H, midtones_C), global vibrance, contrast, '
+            'sigmoid middle grey contrast, exposure offset and local detail. '
+            'Return ONLY a JSON object with reason (professional Spanish explanation of your artistic color grading choices) '
+            'and adjustments (array of {operation,params}). '
+            'Propose ABSOLUTE numeric parameter values. Never output images, code, paths, commands or masks. '
+            'Preserve natural healthy skin if present, protect highlights from harsh clipping. At most 6 module adjustments. '
+            'Use only these allowed modules, fields and inclusive bounds: ' + json.dumps(LIMITS)
+        )
+    else:
+        system = (
+            'You are a master photographic colorist controlling darktable. Analyze the provided image '
+            'and telemetry (white balance, skin tones, dynamic range, noise). Return ONLY a JSON object '
+            'with reason (concise professional Spanish explanation of your artistic and technical decisions) '
+            'and adjustments (array of {operation,params}). '
+            'Propose ABSOLUTE numeric parameter values, not deltas. Never output images, code, '
+            'paths, commands, masks, tool calls or binary parameters. Keep the requested style, '
+            'preserve plausible healthy skin, protect highlights from clipping, and maintain contrast. '
+            'Do not brighten night scenes into daylight. At most 6 module adjustments. You may leave adjustments empty. '
+            'Use only these allowed modules, fields and inclusive bounds: ' + json.dumps(LIMITS)
+        )
     content = [
         {'type': 'text', 'text': json.dumps({'intent': intent, 'current_stack': stack, 'measurements': measurements}, ensure_ascii=False)},
         {'type': 'image_url', 'image_url': {'url': 'data:image/png;base64,' + base64.b64encode(preview.read_bytes()).decode()}},
@@ -139,7 +153,8 @@ def propose(preview, stack, measurements, intent):
         name = models.json()['data'][0]['id']
         response = client.post(local_url() + '/chat/completions', json={
             'model': name, 'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': content}],
-            'temperature': .1, 'max_tokens': 900,
+            'temperature': .25 if is_prompt_style else .1,
+            'max_tokens': 900,
             'response_format': {'type': 'json_object'},
         })
         response.raise_for_status()

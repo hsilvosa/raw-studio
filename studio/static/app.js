@@ -27,7 +27,11 @@ function buttons() {
   $('export').disabled = busy || !chosen;
   $('import').disabled = busy;
   $('clear-cache').disabled = busy;
-  $('develop').textContent = selectedProfiles.size > 1 ? `Develop ${selectedProfiles.size} profiles` : 'Develop profile';
+  if (selectedProfiles.size === 1 && [...selectedProfiles][0] === '00_PROMPT_IA') {
+    $('develop').textContent = 'Develop AI prompt style';
+  } else {
+    $('develop').textContent = selectedProfiles.size > 1 ? `Develop ${selectedProfiles.size} profiles` : 'Develop profile';
+  }
   $('apply-zones').disabled = busy || !chosen;
   $('reset-zones').disabled = busy || !chosen || !zonalActive;
 }
@@ -630,8 +634,14 @@ function updateProfileSelectionUI() {
     const pid = [...selectedProfiles][0];
     const found = profiles.find(p => p.id === pid);
     $('profile-summary').textContent = found ? found.title : pid;
+    if (pid === '00_PROMPT_IA') {
+      $('model').checked = true;
+    }
   } else {
     $('profile-summary').textContent = `${count} profiles selected`;
+    if (selectedProfiles.has('00_PROMPT_IA')) {
+      $('model').checked = true;
+    }
   }
   buttons();
 }
@@ -725,14 +735,16 @@ function initProfileSelector() {
 async function develop(profileId, currentNum = 1, total = 1, remaining = 0, profileTitle = '') {
   const prefix = total > 1 ? `[${currentNum}/${total}] (${remaining} remaining) ${profileTitle}` : '';
   if (prefix) report(`${prefix} — Preparing image`);
+  const isPromptProfile = (profileId === '00_PROMPT_IA');
+  const userIntent = ($('intent').value || '').trim();
   const j = await api('/develop', {
     image_id: current.id,
     profile_id: profileId,
     intensity: Number($('intensity').value) / 100,
     exposure_offset: Number($('exposure').value),
     adapt: $('adapt').checked,
-    use_model: $('model').checked,
-    intent: $('intent').value || 'Adapt style to the scene and preserve whites.'
+    use_model: $('model').checked || isPromptProfile,
+    intent: userIntent || (isPromptProfile ? 'Estilo fotográfico cinematográfico y armónico con paleta rica y tonos cuidados.' : 'Adapt style to the scene and preserve whites.')
   });
   const r = await waitJob(j.job_id, prefix);
   const items = results.get(current.id) || [];
@@ -755,7 +767,7 @@ async function developBatch(profileIds) {
 }
 
 $('develop').onclick = () => task(() => developBatch([...selectedProfiles]));
-$('all').onclick = () => task(() => developBatch(profiles.map(p => p.id)));
+$('all').onclick = () => task(() => developBatch(profiles.filter(p => p.id !== '00_PROMPT_IA').map(p => p.id)));
 
 $('export').onclick = () => task(async () => {
   const j = await api('/renders/' + chosen.render_id + '/export', {});
@@ -1072,9 +1084,35 @@ async function connection() {
   }
 }
 
+function initPromptChips() {
+  const chips = document.querySelectorAll('.prompt-chip');
+  chips.forEach(chip => {
+    chip.onclick = () => {
+      const prompt = chip.getAttribute('data-prompt');
+      $('intent').value = prompt;
+      chips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      $('model').checked = true;
+      if (selectedProfiles.size === 0 || (selectedProfiles.size === 1 && !selectedProfiles.has('00_PROMPT_IA'))) {
+        selectedProfiles.clear();
+        selectedProfiles.add('00_PROMPT_IA');
+        for (const c of $('profile-options').querySelectorAll('input[type=checkbox]')) {
+          c.checked = (c.value === '00_PROMPT_IA');
+        }
+        updateProfileSelectionUI();
+      }
+      $('intent').focus();
+    };
+  });
+  $('intent').addEventListener('input', () => {
+    chips.forEach(c => c.classList.remove('active'));
+  });
+}
+
 async function init() {
   profiles = await api('/profiles');
   initProfileSelector();
+  initPromptChips();
   initZonalControls();
 
   for (const r of await api('/renders')) {

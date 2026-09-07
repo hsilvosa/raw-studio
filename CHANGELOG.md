@@ -176,3 +176,14 @@ Expanded the catalog from 8 to 20 carefully calibrated photographic profiles:
 - **Visual HTML Report & Telemetry**:
   - Generates `.studio/reports/evaluation_report.html` and `.studio/reports/evaluation_summary.json` with side-by-side renders, metric comparisons, and model reasoning text.
   - Accessible via web UI at `/api/reports/evaluation` or via CLI command `python scripts/evaluate-model.py`.
+
+### 15. Pure Neutral Profile & Prompt-Driven AI Style Authoring
+- **Pure Neutral Profile (`00_NEUTRAL`)**:
+  - Added clean, uncolored baseline without any inherited film or cinematic tints.
+  - Ideal for pure realistic correction, product/documentary photography, or objective model evaluation.
+- **AI Style by Prompt (`00_PROMPT_IA`)**:
+  - Allows full artistic development created from scratch by the vision model without relying on any preset color profile.
+  - Tailored creative prompt in `model.py` instructs the model to translate descriptive natural language prompts into harmonious Darktable color wheels (`colorbalancergb`), contrast, vibrance, tone curve (`sigmoid`), and detail.
+- **Interactive Prompt Suggestion Chips**:
+  - Added 1-click creative style chips in the UI ("Cine Cálido", "Cine Noir", "Pastel Suave", "Tokyo Neón", "Vintage 70s", "Documental").
+  - Automatically enables the local model, populates the direction input, and updates develop button state.

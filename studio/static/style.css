@@ -287,6 +287,35 @@ select, textarea {
 }
 select:focus, textarea:focus { outline: none; border-color: var(--accent); }
 textarea { resize: vertical; }
+
+.prompt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+.prompt-chip {
+  background: #25292c;
+  color: #b0b4b8;
+  border: 1px solid #3c4044;
+  border-radius: 12px;
+  font-size: 10.5px;
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.prompt-chip:hover {
+  background: #33383d;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.prompt-chip.active {
+  background: rgba(229, 140, 77, 0.18);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .check { display: flex; gap: 9px; align-items: center; margin: 14px 0 0; cursor: pointer; }
 input[type=range] { width: 100%; accent-color: var(--accent); cursor: pointer; }
 input[type=checkbox] { accent-color: var(--accent); cursor: pointer; }

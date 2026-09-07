@@ -107,7 +107,15 @@
       <label class="check"><input id="model" type="checkbox"> Adapt with local model</label>
       <p class="hint">The local model inspects the image and suggests parameters. Darktable renders the final image.</p>
       <label for="intent">Editing prompt / direction</label>
-      <textarea id="intent" rows="3" placeholder="e.g. preserve whites and slightly cool the shadows."></textarea>
+      <div class="prompt-chips" id="prompt-chips">
+        <button type="button" class="prompt-chip" data-prompt="Cinemático cálido con sombras azuladas y grano suave">Cine Cálido</button>
+        <button type="button" class="prompt-chip" data-prompt="Cine noir en blanco y negro con alto contraste dramático">Cine Noir</button>
+        <button type="button" class="prompt-chip" data-prompt="Tonos pastel etéreos, luces suaves y piel luminosa">Pastel Suave</button>
+        <button type="button" class="prompt-chip" data-prompt="Atmósfera nocturna de Tokyo con luces de neón cian y magenta">Tokyo Neón</button>
+        <button type="button" class="prompt-chip" data-prompt="Aspecto analógico vintage años 70 con tonos dorados">Vintage 70s</button>
+        <button type="button" class="prompt-chip" data-prompt="Fotoperiodismo documental con colores naturales y neutros">Documental</button>
+      </div>
+      <textarea id="intent" rows="3" placeholder="e.g. atardecer dorado cinematográfico con sombras azuladas y grano suave..."></textarea>
       <button class="primary" id="develop" disabled>Develop profile</button>
       <button id="all" disabled>Compare all profiles</button>
       <button id="export" disabled>Export selection</button>

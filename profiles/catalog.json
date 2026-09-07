@@ -1,5 +1,79 @@
 [
   {
+    "id": "00_NEUTRAL",
+    "title": "Pure Neutral",
+    "description": "Clean, authentic baseline without color casts. Ideal for faithful natural editing or pure correction.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.35,
+          "contrast_skewness": 0.0,
+          "display_black_target": 0.02
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "contrast": 0.0,
+          "vibrance": 0.0,
+          "chroma_global": 0.0,
+          "saturation_global": 0.0
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.15,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      },
+      {
+        "operation": "sharpen",
+        "params": {
+          "amount": 0.5,
+          "radius": 0.7,
+          "threshold": 1.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "00_PROMPT_IA",
+    "title": "AI Style by Prompt",
+    "description": "Original color grading and tonal aesthetic designed from scratch by the vision model based on your creative prompt.",
+    "stack": [
+      {
+        "operation": "sigmoid",
+        "params": {
+          "middle_grey_contrast": 1.35,
+          "contrast_skewness": 0.0,
+          "display_black_target": 0.02
+        }
+      },
+      {
+        "operation": "colorbalancergb",
+        "params": {
+          "contrast": 0.0,
+          "vibrance": 0.0,
+          "chroma_global": 0.0,
+          "saturation_global": 0.0
+        }
+      },
+      {
+        "operation": "bilat",
+        "params": {
+          "detail": 0.15,
+          "sigma_r": 0.5,
+          "sigma_s": 0.5,
+          "midtone": 0.5
+        }
+      }
+    ]
+  },
+  {
     "id": "01_CINEMATICO",
     "title": "Subdued Cinematic",
     "description": "Original profile color; no inherited crop or blur.",

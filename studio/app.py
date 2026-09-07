@@ -155,16 +155,26 @@ def develop(job_id, request):
     update(job_id, message='Developing with darktable')
     engine.export(source, stack, candidate, request.width)
 
+    is_prompt_style = (profile['id'] == '00_PROMPT_IA')
+    use_model = request.use_model or is_prompt_style
+
     model_name = None
     proposal = None
     model_warning = None
-    if request.use_model:
-        update(job_id, message='Local model is proposing adjustments')
+    if use_model:
+        update(job_id, message='Local model is creating prompt style' if is_prompt_style else 'Local model is proposing adjustments')
         # Render a small model input through darktable, never an image generator.
         model_preview = folder / 'model-input.png'
         engine.export(source, stack, model_preview, 768)
         try:
-            proposal, model_name = model.propose(model_preview, stack, telemetry, profile['title'] + '. ' + request.intent)
+            prompt_intent = (request.intent or '').strip()
+            if is_prompt_style:
+                if not prompt_intent or prompt_intent == 'Preserve style and adapt intensity to the scene.':
+                    prompt_intent = 'Estilo fotográfico cinematográfico y armónico con paleta rica y tonos cuidados.'
+            else:
+                prompt_intent = profile['title'] + (f'. {prompt_intent}' if prompt_intent else '')
+
+            proposal, model_name = model.propose(model_preview, stack, telemetry, prompt_intent, is_prompt_style=is_prompt_style)
             stack = merge(stack, proposal)
             update(job_id, message='Applying model recipe in darktable')
             adapted_candidate = folder / 'adapted.png'

@@ -73,3 +73,19 @@ def test_sanitize_proposal():
     assert prop.adjustments[0].params['sigma_r'] == 1.0
     assert 'extra_foo' not in prop.adjustments[0].params
 
+
+def test_neutral_and_prompt_profiles():
+    from studio.recipes import profiles
+    catalog = profiles()
+    ids = [p['id'] for p in catalog]
+    assert '00_NEUTRAL' in ids
+    assert '00_PROMPT_IA' in ids
+
+    neutral = next(p for p in catalog if p['id'] == '00_NEUTRAL')
+    assert any(m['operation'] == 'sigmoid' for m in neutral['stack'])
+    assert any(m['operation'] == 'colorbalancergb' for m in neutral['stack'])
+
+    prompt_p = next(p for p in catalog if p['id'] == '00_PROMPT_IA')
+    assert 'prompt' in prompt_p['description'].lower() or 'prompt' in prompt_p['title'].lower()
+
+
