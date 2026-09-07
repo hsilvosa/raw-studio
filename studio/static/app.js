@@ -364,23 +364,27 @@ async function fetchLibraryMetadata() {
     // Update tag chips in library bar
     const tagChipsWrap = $('lib-tag-chips');
     tagChipsWrap.replaceChildren();
-    for (const t of libraryMetadata.tags || []) {
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'lib-chip' + (selectedTagFilter === t.tag ? ' active' : '');
-      chip.textContent = `#${t.tag} (${t.count})`;
-      chip.title = `Filter by #${t.tag}`;
-      chip.onclick = () => {
-        if (selectedTagFilter === t.tag) {
-          selectedTagFilter = '';
-        } else {
-          selectedTagFilter = t.tag;
-          favoriteFilterOnly = false;
-        }
-        updateFilterChipsUI();
-        renderLibraryItems();
-      };
-      tagChipsWrap.append(chip);
+    const hasTags = libraryMetadata.tags && libraryMetadata.tags.length > 0;
+    $('library-chips-bar').hidden = !hasTags;
+    if (hasTags) {
+      for (const t of libraryMetadata.tags) {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'lib-chip' + (selectedTagFilter === t.tag ? ' active' : '');
+        chip.textContent = `#${t.tag} (${t.count})`;
+        chip.title = `Filter by #${t.tag}`;
+        chip.onclick = () => {
+          if (selectedTagFilter === t.tag) {
+            selectedTagFilter = '';
+          } else {
+            selectedTagFilter = t.tag;
+            favoriteFilterOnly = false;
+          }
+          updateFilterChipsUI();
+          renderLibraryItems();
+        };
+        tagChipsWrap.append(chip);
+      }
     }
   } catch (e) {
     console.error('Failed to load library metadata', e);
@@ -388,6 +392,8 @@ async function fetchLibraryMetadata() {
 }
 
 function updateFilterChipsUI() {
+  const favBtn = $('lib-fav-filter-btn');
+  if (favBtn) favBtn.classList.toggle('active', favoriteFilterOnly);
   const allChip = $('library-chips-bar')?.querySelector('[data-filter="all"]');
   const favChip = $('library-chips-bar')?.querySelector('[data-filter="favorites"]');
   if (allChip) allChip.classList.toggle('active', !favoriteFilterOnly && !selectedTagFilter);
@@ -564,6 +570,16 @@ $('lib-folder-select').onchange = () => {
   renderLibraryItems();
 };
 
+const favFilterBtn = $('lib-fav-filter-btn');
+if (favFilterBtn) {
+  favFilterBtn.onclick = () => {
+    favoriteFilterOnly = !favoriteFilterOnly;
+    if (favoriteFilterOnly) selectedTagFilter = '';
+    updateFilterChipsUI();
+    renderLibraryItems();
+  };
+}
+
 const chipAll = $('library-chips-bar')?.querySelector('[data-filter="all"]');
 if (chipAll) {
   chipAll.onclick = () => {
@@ -662,40 +678,46 @@ function renderLibraryItems() {
     nameSpan.className = 'photo-name';
     nameSpan.textContent = im.name;
 
+    const metaRow = document.createElement('div');
+    metaRow.className = 'photo-meta-row';
+
     const folderSpan = document.createElement('span');
     folderSpan.className = 'photo-folder';
     folderSpan.textContent = '📁 ' + (im.folder || 'Main');
     folderSpan.title = `Folder: ${im.folder || 'Main'}`;
 
-    const tagsDiv = document.createElement('div');
-    tagsDiv.className = 'photo-tags';
-    for (const t of (im.tags || [])) {
-      const tagSpan = document.createElement('span');
-      tagSpan.className = 'photo-tag';
-      tagSpan.textContent = '#' + t;
-      tagSpan.title = `Filter by #${t}`;
-      tagSpan.onclick = (e) => {
-        e.stopPropagation();
-        selectedTagFilter = (selectedTagFilter === t ? '' : t);
-        favoriteFilterOnly = false;
-        updateFilterChipsUI();
-        renderLibraryItems();
-      };
-      tagsDiv.append(tagSpan);
-    }
-
     const addTagBtn = document.createElement('button');
     addTagBtn.type = 'button';
     addTagBtn.className = 'btn-add-tag-inline';
     addTagBtn.textContent = '+';
-    addTagBtn.title = 'Manage tags';
+    addTagBtn.title = 'Add tags';
     addTagBtn.onclick = (e) => {
       e.stopPropagation();
       openTagModal(im);
     };
-    tagsDiv.append(addTagBtn);
 
-    b.append(img, nameSpan, folderSpan, tagsDiv);
+    metaRow.append(folderSpan, addTagBtn);
+    b.append(img, nameSpan, metaRow);
+
+    if (im.tags && im.tags.length > 0) {
+      const tagsDiv = document.createElement('div');
+      tagsDiv.className = 'photo-tags';
+      for (const t of im.tags) {
+        const tagSpan = document.createElement('span');
+        tagSpan.className = 'photo-tag';
+        tagSpan.textContent = '#' + t;
+        tagSpan.title = `Filter by #${t}`;
+        tagSpan.onclick = (e) => {
+          e.stopPropagation();
+          selectedTagFilter = (selectedTagFilter === t ? '' : t);
+          favoriteFilterOnly = false;
+          updateFilterChipsUI();
+          renderLibraryItems();
+        };
+        tagsDiv.append(tagSpan);
+      }
+      b.append(tagsDiv);
+    }
 
     b.onclick = () => {
       if (librarySelecting) {

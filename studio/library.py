@@ -24,6 +24,16 @@ def connect():
     if 'favorite' not in columns:
         conn.execute("ALTER TABLE images ADD COLUMN favorite INTEGER DEFAULT 0")
     conn.execute('CREATE TABLE IF NOT EXISTS image_tags (image_id TEXT, tag TEXT, PRIMARY KEY(image_id, tag))')
+
+    # Backfill folder for existing images if empty or generic 'Main'
+    rows_to_update = conn.execute("SELECT id, source FROM images WHERE folder IS NULL OR folder = '' OR folder = 'Main'").fetchall()
+    for r in rows_to_update:
+        src = r['source']
+        if src:
+            p_name = Path(src).parent.name
+            if p_name and p_name != 'Main':
+                conn.execute("UPDATE images SET folder=? WHERE id=?", (p_name, r['id']))
+
     return conn
 
 
@@ -282,11 +292,11 @@ def set_folder(identifiers: list[str], folder: str):
 def get_library_metadata():
     with connect() as conn:
         tag_rows = conn.execute('SELECT tag, COUNT(image_id) as cnt FROM image_tags GROUP BY tag ORDER BY cnt DESC, tag ASC').fetchall()
-        folder_rows = conn.execute('SELECT folder, COUNT(id) as cnt FROM images GROUP BY folder ORDER BY cnt DESC, folder ASC').fetchall()
+        folder_rows = conn.execute("SELECT folder, COUNT(id) as cnt FROM images WHERE folder IS NOT NULL AND folder != '' GROUP BY folder ORDER BY cnt DESC, folder ASC").fetchall()
         fav_row = conn.execute('SELECT COUNT(id) as cnt FROM images WHERE favorite=1').fetchone()
 
     tags = [{'tag': r['tag'], 'count': r['cnt']} for r in tag_rows]
-    folders = [{'folder': (r['folder'] or 'Main'), 'count': r['cnt']} for r in folder_rows]
+    folders = [{'folder': r['folder'], 'count': r['cnt']} for r in folder_rows]
     favorites_count = fav_row['cnt'] if fav_row else 0
     return {
         'tags': tags,
