@@ -1164,7 +1164,11 @@ if ($('open-export-folder')) {
   $('open-export-folder').onclick = async () => {
     try {
       const res = await api('/system/open-folder', { path: lastExportedPath });
-      report('Opened in file explorer: ' + res.opened);
+      const shownPath = res.folder || res.opened || '';
+      report('Opened in file explorer: ' + shownPath);
+      if (navigator.clipboard && shownPath) {
+        try { await navigator.clipboard.writeText(shownPath); } catch (_) {}
+      }
     } catch (e) {
       report(e.message);
     }

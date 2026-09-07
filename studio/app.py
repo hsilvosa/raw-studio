@@ -540,50 +540,25 @@ def export_batch_renders(job_id, recipes):
 
 def open_in_file_manager(target: Path):
     """
-    Opens the operating system file manager.
-    If target is a file, attempts to highlight/select it in the folder view.
-    If target is a directory, opens that directory.
+    Opens the operating system file manager to the folder containing target (or target itself if dir).
     """
+    folder = target if target.is_dir() else target.parent
+    folder.mkdir(parents=True, exist_ok=True)
+    folder_str = str(folder.resolve())
+
     if sys.platform == 'win32':
-        opened = False
-        target_str = str(target)
-        if target.is_file():
-            try:
-                import ctypes
-                ret = ctypes.windll.shell32.ShellExecuteW(None, 'open', 'explorer.exe', f'/select,"{target_str}"', None, 1)
-                if ret > 32:
-                    opened = True
-            except Exception:
-                pass
-            if not opened:
-                try:
-                    os.startfile(str(target.parent))
-                    opened = True
-                except Exception:
-                    pass
-        else:
-            try:
-                os.startfile(target_str)
-                opened = True
-            except Exception:
-                pass
-        if not opened:
-            try:
-                arg = f'/select,"{target_str}"' if target.is_file() else f'"{target_str}"'
-                subprocess.Popen(f'explorer.exe {arg}', shell=True)
-                opened = True
-            except Exception:
-                pass
-        return opened
+        # On Windows, os.startfile(folder_str) directly tells the shell to open the folder window
+        # in the user's interactive desktop without spawning hanging DCOM embedding processes.
+        os.startfile(folder_str)
+        return True
     elif sys.platform == 'darwin':
         if target.is_file():
             subprocess.Popen(['open', '-R', str(target)])
         else:
-            subprocess.Popen(['open', str(target)])
+            subprocess.Popen(['open', folder_str])
         return True
     else:
-        folder = target if target.is_dir() else target.parent
-        subprocess.Popen(['xdg-open', str(folder)])
+        subprocess.Popen(['xdg-open', folder_str])
         return True
 
 
@@ -604,11 +579,13 @@ def open_folder_route(data: dict):
     else:
         target.parent.mkdir(parents=True, exist_ok=True)
 
+    folder = target if target.is_dir() else target.parent
     try:
         open_in_file_manager(target)
-        return {'status': 'ok', 'opened': str(target)}
+        return {'status': 'ok', 'opened': str(target), 'folder': str(folder.resolve())}
     except Exception as e:
         raise HTTPException(500, f'Cannot open file browser: {str(e)}')
+
 
 
 
