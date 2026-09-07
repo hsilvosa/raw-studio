@@ -326,7 +326,7 @@ function setLibrarySelecting(enabled) {
   librarySelecting = enabled;
   $('library').classList.toggle('selecting', enabled);
   $('library-selection-bar').hidden = !enabled;
-  $('lib-select-mode').textContent = enabled ? 'Done' : 'Select';
+  $('lib-select-mode').textContent = enabled ? 'Cancel' : 'Select';
   if (!enabled) selectedLibraryImages.clear();
   updateLibrarySelectionUI();
   renderLibraryItems();
@@ -532,7 +532,6 @@ $('save-folder-dialog').onclick = async () => {
 
 // Selection Bar wiring
 $('lib-select-mode').onclick = () => setLibrarySelecting(!librarySelecting);
-$('lib-cancel').onclick = () => setLibrarySelecting(false);
 $('lib-select-all').onclick = () => {
   for (const im of images) selectedLibraryImages.add(im.id);
   renderLibraryItems();
