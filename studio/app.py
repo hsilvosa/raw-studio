@@ -558,9 +558,9 @@ def open_folder_route(data: dict):
     try:
         if sys.platform == 'win32':
             if target.is_file():
-                subprocess.Popen(['explorer', f'/select,{str(target)}'])
+                subprocess.Popen(f'explorer.exe /select,"{str(target)}"')
             else:
-                subprocess.Popen(['explorer', str(target)])
+                os.startfile(str(target))
         elif sys.platform == 'darwin':
             subprocess.Popen(['open', str(target)])
         else:

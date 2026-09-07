@@ -3,6 +3,7 @@ const $ = id => document.getElementById(id);
 let images = [], profiles = [], current = null, chosen = null, busy = false;
 const results = new Map(), selected = new Set();
 const selectedProfiles = new Set();
+const selectedRenders = new Set();
 
 // --- API & Tasks ---
 async function api(path, body) {
@@ -24,11 +25,20 @@ function buttons() {
   const hasProfile = selectedProfiles.size > 0;
   $('develop').disabled = busy || !current || !hasProfile;
   $('all').disabled = busy || !current || profiles.length === 0;
-  $('export').disabled = busy || !chosen;
   const currentResults = current ? (results.get(current.id) || []) : [];
-  if ($('export-all')) {
-    $('export-all').disabled = busy || currentResults.length === 0;
-    $('export-all').textContent = currentResults.length > 1 ? `Export all (${currentResults.length})` : 'Export all';
+  const exportBtn = $('export');
+  const openModalBtn = $('open-export-modal');
+  if (exportBtn) {
+    if (selectedRenders.size > 0) {
+      exportBtn.disabled = busy;
+      exportBtn.textContent = `Export (${selectedRenders.size})`;
+    } else {
+      exportBtn.disabled = busy || !chosen;
+      exportBtn.textContent = 'Export';
+    }
+  }
+  if (openModalBtn) {
+    openModalBtn.disabled = busy || currentResults.length === 0;
   }
   $('import').disabled = busy;
   $('clear-cache').disabled = busy;
@@ -763,6 +773,7 @@ async function refresh() {
 function select(im) {
   current = im;
   chosen = null;
+  selectedRenders.clear();
   $('filename').textContent = im.name;
   $('empty').hidden = true;
   $('pair').hidden = false;
@@ -807,9 +818,23 @@ function drawResults() {
   for (const r of results.get(current?.id) || []) {
     const b = document.createElement('button');
     const hasModel = Boolean(r.recipe?.model || r.recipe?.proposal);
+    const isChecked = selectedRenders.has(r.render_id);
     b.dataset.renderId = r.render_id || '';
     b.dataset.url = r.url || '';
-    b.className = 'result' + (chosen?.render_id === r.render_id ? ' active' : '') + (hasModel ? ' has-model' : '');
+    b.className = 'result' + (chosen?.render_id === r.render_id ? ' active' : '') + (isChecked ? ' checked' : '') + (hasModel ? ' has-model' : '');
+
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.className = 'result-check';
+    check.checked = isChecked;
+    check.title = 'Select this development for export';
+    check.onclick = (e) => {
+      e.stopPropagation();
+      if (check.checked) selectedRenders.add(r.render_id);
+      else selectedRenders.delete(r.render_id);
+      b.classList.toggle('checked', check.checked);
+      buttons();
+    };
 
     const thumbWrap = document.createElement('div');
     thumbWrap.className = 'result-thumb-wrap';
@@ -837,7 +862,7 @@ function drawResults() {
       title.prepend(tag);
     }
 
-    b.append(thumbWrap, title);
+    b.append(check, thumbWrap, title);
     b.onclick = (e) => {
       if (resultsHasDragged) {
         e.preventDefault();
@@ -997,31 +1022,141 @@ $('all').onclick = () => task(() => developBatch(profiles.filter(p => p.id !== '
 let lastExportedPath = '';
 
 $('export').onclick = () => task(async () => {
-  if (!chosen) return;
-  report('Exporting full-resolution PNG...');
-  const j = await api('/renders/' + chosen.render_id + '/export', {});
-  const r = await waitJob(j.job_id);
-  lastExportedPath = r.path || '';
-  report('Saved to ' + r.path);
+  let renderIdsToExport = [];
+  if (selectedRenders.size > 0) {
+    renderIdsToExport = [...selectedRenders];
+  } else if (chosen) {
+    renderIdsToExport = [chosen.render_id];
+  }
+  if (!renderIdsToExport.length) return;
+
+  if (renderIdsToExport.length === 1) {
+    report('Exporting full-resolution PNG...');
+    const j = await api('/renders/' + renderIdsToExport[0] + '/export', {});
+    const r = await waitJob(j.job_id);
+    lastExportedPath = r.path || '';
+    report('Saved to ' + r.path);
+  } else {
+    report(`Exporting ${renderIdsToExport.length} selected images at 6000 pixels...`);
+    const j = await api('/renders/batch-export', { render_ids: renderIdsToExport });
+    const r = await waitJob(j.job_id);
+    lastExportedPath = r.path || r.folder || '';
+    report(`Exported ${r.count || renderIdsToExport.length} photos to ${r.folder || 'export folder'}`);
+  }
   if ($('open-export-folder')) {
     $('open-export-folder').textContent = '📁 Show in Explorer';
   }
 });
 
-if ($('export-all')) {
-  $('export-all').onclick = () => task(async () => {
-    const currentResults = current ? (results.get(current.id) || []) : [];
-    if (!currentResults.length) return;
-    const renderIds = currentResults.map(r => r.render_id);
-    report(`Exporting ${renderIds.length} developed images at 6000 pixels...`);
-    const j = await api('/renders/batch-export', { render_ids: renderIds });
-    const r = await waitJob(j.job_id);
-    lastExportedPath = r.path || r.folder || '';
-    report(`Exported ${r.count || renderIds.length} photos to ${r.folder || 'export folder'}`);
-    if ($('open-export-folder')) {
-      $('open-export-folder').textContent = '📁 Show in Explorer';
+function openExportModal() {
+  const currentResults = current ? (results.get(current.id) || []) : [];
+  if (!currentResults.length) return;
+
+  $('export-dialog-title').textContent = `Select Developments to Export — ${current.name}`;
+  const list = $('export-dialog-list');
+  list.replaceChildren();
+
+  // If nothing selected, select chosen or all by default
+  if (selectedRenders.size === 0 && chosen) {
+    selectedRenders.add(chosen.render_id);
+  }
+
+  function updateModalUI() {
+    $('export-dialog-count').textContent = `${selectedRenders.size} of ${currentResults.length} selected`;
+    $('confirm-export-dialog').disabled = selectedRenders.size === 0 || busy;
+    $('confirm-export-dialog').textContent = selectedRenders.size > 1 ? `Export (${selectedRenders.size})` : 'Export';
+  }
+
+  for (const r of currentResults) {
+    const item = document.createElement('div');
+    const isChecked = selectedRenders.has(r.render_id);
+    item.className = 'export-dialog-item' + (isChecked ? ' selected' : '');
+
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.checked = isChecked;
+
+    const thumb = document.createElement('img');
+    thumb.className = 'export-dialog-thumb';
+    thumb.src = r.url;
+    thumb.alt = r.recipe.profile_title;
+
+    const info = document.createElement('div');
+    info.className = 'export-dialog-info';
+    const title = document.createElement('span');
+    title.className = 'export-dialog-title';
+    title.textContent = r.recipe.profile_title;
+    const sub = document.createElement('span');
+    sub.className = 'export-dialog-sub';
+    const hasModel = Boolean(r.recipe?.model || r.recipe?.proposal);
+    sub.textContent = `${current.name} · ${r.recipe.profile_id}` + (hasModel ? ' [IA]' : '');
+    info.append(title, sub);
+
+    item.append(check, thumb, info);
+
+    const toggle = (nextState) => {
+      check.checked = nextState;
+      if (nextState) selectedRenders.add(r.render_id);
+      else selectedRenders.delete(r.render_id);
+      item.classList.toggle('selected', nextState);
+      updateModalUI();
+      drawResults();
+      buttons();
+    };
+
+    check.onclick = (e) => {
+      e.stopPropagation();
+      toggle(check.checked);
+    };
+    item.onclick = () => {
+      toggle(!selectedRenders.has(r.render_id));
+    };
+
+    list.append(item);
+  }
+
+  $('export-dialog-select-all').onclick = () => {
+    for (const r of currentResults) selectedRenders.add(r.render_id);
+    for (const el of list.children) {
+      el.classList.add('selected');
+      const c = el.querySelector('input[type="checkbox"]');
+      if (c) c.checked = true;
     }
-  });
+    updateModalUI();
+    drawResults();
+    buttons();
+  };
+
+  $('export-dialog-select-none').onclick = () => {
+    selectedRenders.clear();
+    for (const el of list.children) {
+      el.classList.remove('selected');
+      const c = el.querySelector('input[type="checkbox"]');
+      if (c) c.checked = false;
+    }
+    updateModalUI();
+    drawResults();
+    buttons();
+  };
+
+  updateModalUI();
+  $('export-modal').showModal();
+}
+
+if ($('open-export-modal')) {
+  $('open-export-modal').onclick = openExportModal;
+}
+if ($('close-export-dialog')) {
+  $('close-export-dialog').onclick = () => $('export-modal').close();
+}
+if ($('cancel-export-dialog')) {
+  $('cancel-export-dialog').onclick = () => $('export-modal').close();
+}
+if ($('confirm-export-dialog')) {
+  $('confirm-export-dialog').onclick = () => {
+    $('export-modal').close();
+    $('export').click();
+  };
 }
 
 if ($('open-export-folder')) {

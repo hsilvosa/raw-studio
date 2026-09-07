@@ -136,8 +136,8 @@
       <button id="all" disabled>Compare all profiles</button>
       <div class="export-actions-wrap">
         <div class="export-buttons-row">
-          <button type="button" id="export" class="btn-action" disabled title="Export current developed look to full-resolution PNG">Export</button>
-          <button type="button" id="export-all" class="btn-action" disabled title="Export all developed looks for this photo">Export all</button>
+          <button type="button" id="export" class="btn-action" disabled title="Export current developed look (or selected ones)">Export</button>
+          <button type="button" id="open-export-modal" class="btn-action btn-subtle" disabled title="Select which developed looks to export">Choose...</button>
         </div>
         <button type="button" id="open-export-folder" class="btn-subtle btn-open-folder" title="Open export folder in file explorer">📁 Open export folder</button>
       </div>
@@ -257,6 +257,25 @@
     <div class="dialog-foot">
       <button type="button" id="cancel-folder-dialog" class="btn-subtle">Cancel</button>
       <button type="button" id="save-folder-dialog" class="primary">Move</button>
+    </div>
+  </dialog>
+
+  <dialog id="export-modal" class="mini-modal export-dialog">
+    <div class="dialog-head">
+      <h3 id="export-dialog-title">Select Developments to Export</h3>
+      <button type="button" id="close-export-dialog" class="btn-icon-close">✕</button>
+    </div>
+    <div class="mini-modal-body">
+      <div class="export-dialog-toolbar">
+        <button type="button" id="export-dialog-select-all" class="btn-mini">Select All</button>
+        <button type="button" id="export-dialog-select-none" class="btn-mini">Clear</button>
+        <span id="export-dialog-count" class="export-dialog-count">0 selected</span>
+      </div>
+      <div class="export-dialog-list" id="export-dialog-list"></div>
+    </div>
+    <div class="dialog-foot">
+      <button type="button" id="cancel-export-dialog" class="btn-subtle">Cancel</button>
+      <button type="button" id="confirm-export-dialog" class="primary">Export Selected</button>
     </div>
   </dialog>
 

@@ -801,6 +801,27 @@ figcaption {
   margin-right: 5px;
   vertical-align: middle;
 }
+.result-check {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 17px;
+  height: 17px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  z-index: 8;
+  opacity: 0.45;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.result:hover .result-check,
+.result-check:checked {
+  opacity: 1;
+}
+.result.checked {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1.5px var(--accent), 0 4px 14px rgba(229, 140, 77, 0.25);
+  background: #2b2721;
+}
 .result-title {
   display: block;
   font-weight: 500;
@@ -1650,6 +1671,81 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(2px); 
   background: #31383d;
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* Export Selection Modal */
+.export-dialog {
+  width: min(460px, 94vw);
+}
+.export-dialog-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.export-dialog-count {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: auto;
+}
+.export-dialog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.export-dialog-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: #191c1e;
+  border: 1px solid #33383d;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.export-dialog-item:hover {
+  background: #23272b;
+  border-color: #484f55;
+}
+.export-dialog-item.selected {
+  border-color: var(--accent);
+  background: #272319;
+}
+.export-dialog-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.export-dialog-thumb {
+  width: 48px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 3px;
+  background: #111;
+  flex-shrink: 0;
+}
+.export-dialog-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.export-dialog-title {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #eee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.export-dialog-sub {
+  font-size: 10px;
+  color: var(--muted);
 }
 
 
