@@ -1,78 +1,103 @@
-# Revelado local
+# Local Raw Studio (Revelado Local)
 
-Aplicación local para comparar perfiles y revelar fotografías con darktable. El modelo visual solo propone parámetros numéricos de darktable. No hay generación de imágenes, reconstrucción de contenido ni herramientas de inpainting.
+A local application for comparing color profiles, organizing libraries, and developing RAW photographs using darktable. The local vision-language model only proposes bounded numerical parameters for darktable modules. There is no generative AI hallucination, image reconstruction, or inpainting.
 
-## Arranque
+## Quick Start
 
-Desde PowerShell, en esta carpeta:
+From PowerShell inside this directory:
 
 ```powershell
 ./run.ps1
 ```
 
-Abre http://127.0.0.1:8765. El lanzador utiliza el entorno `wuxia` si existe; en otro equipo, instala `requirements.txt` en un entorno Python y ejecuta `python -m uvicorn studio.app:app --host 127.0.0.1 --port 8765`.
+Open `http://127.0.0.1:8765`. The launcher automatically uses the `wuxia` Conda environment if available; on other systems, install `requirements.txt` into a Python environment and run:
 
-Darktable debe incluir el ejecutable experimental `darktable-mcp.exe`. La instalación estable habitual no lo incluye. Puedes indicar su ruta mediante `DARKTABLE_MCP`. El puente usa JSON-RPC por stdio, una biblioteca en memoria y `write_sidecar_files=never`.
+```powershell
+python -m uvicorn studio.app:app --host 127.0.0.1 --port 8765
+```
 
-## Uso
+> [!NOTE]
+> darktable must include the experimental `darktable-mcp.exe` binary. Standard stable builds do not include it. You can specify its path using the `DARKTABLE_MCP` environment variable. The bridge communicates over stdio JSON-RPC using an in-memory library and `write_sidecar_files=never`.
 
-1. Importa fotos desde el explorador local. La raíz predeterminada es este repositorio; `PHOTO_ROOT` permite cambiarla antes de iniciar.
-2. Explora la biblioteca con scroll independiente o pulsa **⛶ Expand** para abrir la vista en cuadrícula amplia de miniaturas.
-3. Selecciona una imagen, perfil, intensidad y compensación de exposición.
-4. Revela un perfil o compara todos los disponibles. Selecciona una miniatura para examinar la receta y comparar con el revelado base.
-5. Utiliza los controles de zoom (`Fit`, `−`, `+`, `100%`, `Full Page`), la tecla `F` (o `Esc` para salir), la rueda del ratón centrada en cualquier punto o arrastra con el ratón para desplazarte de forma sincronizada entre el antes y el después. En modo Full Page, la barra inferior de perfiles permanece discretamente minimizada y se desliza con suavidad al mover el ratón a la parte inferior.
-6. Exporta la selección a PNG de hasta 6000 píxeles en `PROCCESED/PERFILES/<perfil>/studio_<imagen>/`. Cada exportación tiene un nombre único y su receta JSON.
+## Core Features
 
-Los detalles de las versiones y cambios están documentados en [CHANGELOG.md](file:///d:/FOTOS/revelado-local/CHANGELOG.md).
+### 1. Photo Library & Organization
+- **Visual File Browser**: Import RAW photos (`.ARW`, `.CR2`, `.NEF`, `.DNG`, etc.) directly from any connected drive or folder with fast embedded thumbnail extraction.
+- **Folders & Organization**: Detects original source directories automatically (e.g. `OSAKA`, `KIOTO`, `FUJI`) and allows custom folder assignment.
+- **Tagging**: Add and manage `#tags` per image or in batch. Click any tag chip to instantly filter the library.
+- **Favorites**: Star favorite photos with `★` and toggle favorites filtering with a single click.
+- **Search & Filter**: Real-time search across filenames, tags, and folder collections.
+- **Multi-Selection & Batch Actions**: Enter selection mode with `Select` in the filter bar to batch-tag, move to folder, or safely remove multiple photos.
+- **Expanded Grid View**: Click **⛶ Expand** to view a responsive multi-column gallery of thumbnails.
 
-## Modelo local y supervisión
+### 2. Developing & Profile Comparison
+- **Color Profiles & Multi-Select**: Compare classic film simulations and creative looks (Portra, Tri-X, Astia, Classic Chrome, CineStill, Kodachrome, Neutral, and more). Select one or multiple profiles simultaneously for batch processing.
+- **Prompt-Based AI Developing**: Select `00_PROMPT_IA` or pick style chips (e.g. *Cinematic warm night*, *Moody rainy day*, *Golden hour editorial*) to describe the aesthetic in natural language.
+- **Side-by-Side Comparison**: Synchronized split viewer comparing the base develop against any developed look.
+- **Smooth Navigation & Zoom**:
+  - Zoom controls: `Fit`, `−`, `+`, `100%`, `Full Page` (or press `F` / `Esc`).
+  - Cursor-centered wheel zoom and drag-to-pan synchronized across both viewports.
+  - Right-click on any developed image to copy it directly to your clipboard.
+  - Smooth horizontal scrolling on developed profiles.
+- **High-Resolution Export**: Export finished developments up to 6000px PNG in `PROCCESED/PERFILES/<profile>/studio_<image>/` with full recipe metadata.
 
-Se utiliza Qwen3-VL-4B-Instruct Q4_K_M con llama.cpp sobre GPU local. La descarga y arranque pueden gestionarse con los scripts dedicados:
+## Local Vision Model & Supervision
+
+The system integrates `Qwen3-VL-4B-Instruct Q4_K_M` running locally on GPU via `llama.cpp`. Download and start the model daemon using the provided helper scripts:
 
 ```powershell
 ./scripts/download-model.ps1
 ./scripts/run-model.ps1
 ```
 
-La aplicación incluye un supervisor automático (`ensure_server()`) que verifica la disponibilidad del modelo en `http://127.0.0.1:8081/v1` y monitoriza su estado de salud en tiempo real.
+An automatic supervisor (`ensure_server()`) continuously checks model availability on `http://127.0.0.1:8081/v1`.
 
-El modelo recibe una previsualización de la imagen, telemetría fotográfica (luminancia, recorte de blancos, dominantes de color y presencia de tonos de piel) y la receta base; devuelve un objeto JSON estructurado con ajustes acotados y justificación estética en español. La aplicación valida estrictamente los módulos y rangos permitidos (`LIMITS` en `studio/recipes.py`) antes de invocar a Darktable por stdio JSON-RPC.
+### Numerical Contract & Safety Guardrails
+The model receives a downscaled image preview, photographic telemetry (luminance, white clipping, color cast, and skin tone detection), and the base recipe. It responds with a structured JSON proposal bounded by strict limits (`LIMITS` in `studio/recipes.py`):
+- All proposed adjustments are clamped to safe photography ranges.
+- Geometry and framing are preserved; modules modifying perspective or crop are prohibited.
+- Module parameters are strictly validated before dispatching to darktable over JSON-RPC.
 
-## Adaptación fotográfica avanzada
+## Advanced Photographic Adaptation
 
-El motor de adaptación (`studio/adaptation.py`) analiza la fotografía antes de proponer y aplicar el revelado:
+The adaptation engine (`studio/adaptation.py`) evaluates scene characteristics before proposing and applying adjustments:
 
-- **Balance de blancos por escena**: Detecta dominantes cromáticas en tonos medios neutros y compensa suavemente la temperatura (`temp_bias`) y el tinte (`tint_bias`) sin alterar intenciones artísticas marcadas.
-- **Protección de tonos de piel**: Identifica regiones de piel humana mediante segmentación en espacios HSV y YCbCr. Si se detectan tonos de piel, acota aumentos agresivos de contraste y vibranza, aplicando curvas suaves para preservar la naturalidad de los rostros.
-- **Protección de blancos y altas luces**: Monitoriza percentiles altos de luminosidad (P98 y P99.5). En escenas con riesgo de sobreexposición, ajusta la caída de altas luces en el módulo sigmoid (`sig_highlight_rolloff`) y atenúa la exposición.
-- **Enfoque y ruido adaptativo**: Estima la varianza de ruido de alta frecuencia (`noise_sigma`). En escenas de alto ISO o ruido notable, incrementa el umbral de enfoque (`sharpen_threshold`) y eleva el perfil de reducción de ruido bilateral, evitando amplificar el grano.
+- **Per-Scene White Balance**: Detects chromatic casts in neutral midtones and subtly compensates temperature (`temp_bias`) and tint (`tint_bias`) without flattening intentional creative lighting.
+- **Skin Tone Protection**: Identifies human skin regions using HSV and YCbCr color segmentation. When skin tones are present, aggressive contrast and saturation boosts are constrained to keep portrait skin natural.
+- **Highlight & Roll-Off Protection**: Monitors high luminosity percentiles (P98 and P99.5). In overexposure-risk scenes, it tunes highlight roll-off in the sigmoid module (`sig_highlight_rolloff`) and attenuates exposure.
+- **Adaptive Sharpness & Denoise**: Computes high-frequency noise variance (`noise_sigma`). In high-ISO or grainy images, it raises sharpen thresholds and bilateral noise reduction to avoid grain amplification.
 
-## Evaluación del modelo y perfiles
+## Evaluation Suite
 
-Para verificar objetivamente las decisiones del modelo frente a perfiles fijos y adaptaciones algorítmicas, se incluye una suite de evaluación (`studio/evaluator.py` y `scripts/evaluate-model.py`):
+To evaluate model decisions against fixed profiles and algorithmic baselines, a dedicated evaluation script is included:
 
 ```powershell
 python ./scripts/evaluate-model.py --profile 09_PORTRA_WARM
 ```
 
-El script compara 3 etapas en paralelo (Perfil Fijo, Adaptación Algorítmica y Modelo Qwen3-VL), midiendo:
-- Porcentaje de píxeles quemados (recorte de blancos >99.5%).
-- Porcentaje de sombras empastadas (recorte de negros <0.5%).
-- Rango dinámico efectivo (EV).
-- Puntuación de armonía de tonos de piel (0–100).
+The script benchmarks three parallel stages (Fixed Profile, Algorithmic Adaptation, and Qwen3-VL Model), measuring:
+- Highlight blowout rate (white clipping > 99.5%).
+- Shadow crushing rate (black clipping < 0.5%).
+- Effective dynamic range (EV).
+- Skin tone harmony score (0–100).
 
-Genera automáticamente un informe interactivo con miniaturas comparativas e histogramas en `.studio/reports/evaluation_report.html` y `.studio/reports/evaluation_summary.json`.
+Results are exported into interactive reports with side-by-side thumbnails and histograms at `.studio/reports/evaluation_report.html` and `.studio/reports/evaluation_summary.json`.
 
-## Estado y seguridad
+## Safety & Data Integrity
 
-- Los archivos RAW y XMP originales nunca se modifican ni se eliminan.
-- Todo el procesamiento es estrictamente local; ninguna imagen ni telemetría sale del equipo.
-- Las recetas y máscaras son reproducibles y no destructivas.
+- **Original RAW and XMP files are never modified or deleted.**
+- All processing is 100% local; no image data or telemetry ever leaves your machine.
+- All recipes are non-destructive, reproducible JSON parameter sets.
 
-## Pruebas
+## Testing
+
+Run the automated test suite with pytest:
 
 ```powershell
-python -m pytest tests -q
+python -m pytest tests -v
 ```
 
-Las pruebas cubren la supervisión del modelo local, el motor de adaptación fotográfica, la segmentación y ajuste de zonas, y el aislamiento de rutas.
+Tests verify the local model supervisor, photographic adaptation engine, library database migrations, safety contract bounds, and path traversal isolation.
+
+---
+See [CHANGELOG.md](file:///d:/FOTOS/revelado-local/CHANGELOG.md) for version history and updates.
