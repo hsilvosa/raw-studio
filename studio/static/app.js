@@ -25,6 +25,11 @@ function buttons() {
   $('develop').disabled = busy || !current || !hasProfile;
   $('all').disabled = busy || !current || profiles.length === 0;
   $('export').disabled = busy || !chosen;
+  const currentResults = current ? (results.get(current.id) || []) : [];
+  if ($('export-all')) {
+    $('export-all').disabled = busy || currentResults.length === 0;
+    $('export-all').textContent = currentResults.length > 1 ? `Export all (${currentResults.length})` : 'Export all';
+  }
   $('import').disabled = busy;
   $('clear-cache').disabled = busy;
   if (selectedProfiles.size === 1 && [...selectedProfiles][0] === '00_PROMPT_IA') {
@@ -339,6 +344,14 @@ function updateLibrarySelectionUI() {
   $('lib-delete-btn').disabled = count === 0 || busy;
   $('lib-batch-tag').disabled = count === 0 || busy;
   $('lib-batch-folder').disabled = count === 0 || busy;
+  if ($('lib-batch-export')) {
+    let developedCount = 0;
+    for (const id of selectedLibraryImages) {
+      developedCount += (results.get(id) || []).length;
+    }
+    $('lib-batch-export').disabled = count === 0 || busy || developedCount === 0;
+    $('lib-batch-export').title = developedCount > 0 ? `Export ${developedCount} developed photos` : 'No developed photos in selection';
+  }
 }
 
 async function fetchLibraryMetadata() {
@@ -981,11 +994,70 @@ async function developBatch(profileIds) {
 $('develop').onclick = () => task(() => developBatch([...selectedProfiles]));
 $('all').onclick = () => task(() => developBatch(profiles.filter(p => p.id !== '00_PROMPT_IA').map(p => p.id)));
 
+let lastExportedPath = '';
+
 $('export').onclick = () => task(async () => {
+  if (!chosen) return;
+  report('Exporting full-resolution PNG...');
   const j = await api('/renders/' + chosen.render_id + '/export', {});
   const r = await waitJob(j.job_id);
+  lastExportedPath = r.path || '';
   report('Saved to ' + r.path);
+  if ($('open-export-folder')) {
+    $('open-export-folder').textContent = '📁 Show in Explorer';
+  }
 });
+
+if ($('export-all')) {
+  $('export-all').onclick = () => task(async () => {
+    const currentResults = current ? (results.get(current.id) || []) : [];
+    if (!currentResults.length) return;
+    const renderIds = currentResults.map(r => r.render_id);
+    report(`Exporting ${renderIds.length} developed images at 6000 pixels...`);
+    const j = await api('/renders/batch-export', { render_ids: renderIds });
+    const r = await waitJob(j.job_id);
+    lastExportedPath = r.path || r.folder || '';
+    report(`Exported ${r.count || renderIds.length} photos to ${r.folder || 'export folder'}`);
+    if ($('open-export-folder')) {
+      $('open-export-folder').textContent = '📁 Show in Explorer';
+    }
+  });
+}
+
+if ($('open-export-folder')) {
+  $('open-export-folder').onclick = async () => {
+    try {
+      const res = await api('/system/open-folder', { path: lastExportedPath });
+      report('Opened in file explorer: ' + res.opened);
+    } catch (e) {
+      report(e.message);
+    }
+  };
+}
+
+if ($('lib-batch-export')) {
+  $('lib-batch-export').onclick = () => task(async () => {
+    const renderIds = [];
+    for (const id of selectedLibraryImages) {
+      const imgResults = results.get(id) || [];
+      for (const r of imgResults) {
+        renderIds.push(r.render_id);
+      }
+    }
+    if (!renderIds.length) {
+      report('No developed photos found in selected images.');
+      return;
+    }
+    report(`Exporting ${renderIds.length} developed photos at 6000 pixels...`);
+    const j = await api('/renders/batch-export', { render_ids: renderIds });
+    const r = await waitJob(j.job_id);
+    lastExportedPath = r.path || r.folder || '';
+    report(`Exported ${r.count || renderIds.length} photos to ${r.folder || 'export folder'}`);
+    if ($('open-export-folder')) {
+      $('open-export-folder').textContent = '📁 Show in Explorer';
+    }
+  });
+}
 
 $('clear-cache').onclick = () => task(async () => {
   if (!confirm('Are you sure you want to clear all developed photo caches?')) return;

@@ -119,3 +119,56 @@ def test_library_api_endpoints(tmp_path, monkeypatch):
     assert data['favorites_count'] == 1
     assert any(f['folder'] == 'Tokyo-Night' for f in data['folders'])
     assert any(t['tag'] == 'urbano' for t in data['tags'])
+
+
+def test_export_naming_and_batch(tmp_path, monkeypatch):
+    import studio.app as app_mod
+    root = tmp_path / 'photos'
+    root.mkdir()
+    state = tmp_path / '.state'
+    output_dir = tmp_path / 'PROCCESED' / 'PERFILES'
+    monkeypatch.setattr(library, 'PHOTO_ROOT', root)
+    monkeypatch.setattr(library, 'STATE', state)
+    monkeypatch.setattr(app_mod, 'OUTPUT', output_dir)
+
+    raw = root / 'DSC09999.ARW'
+    raw.write_bytes(b'dummy raw bytes for export testing')
+    img = library.add(raw)
+
+    class DummyEngine:
+        def export(self, source, stack, output, width):
+            Path(output).write_bytes(b'dummy png export')
+
+    monkeypatch.setattr(app_mod, 'engine', DummyEngine())
+
+    recipe = {
+        'image_id': img['id'],
+        'profile_id': '02_JADE_FRIO',
+        'stack': []
+    }
+
+    # Test single export naming
+    res = app_mod.export_render('job123', recipe)
+    exported_path = Path(res['path'])
+    assert exported_path.name == 'DSC09999_02_JADE_FRIO.png'
+    assert exported_path.parent == output_dir / '02_JADE_FRIO'
+    assert exported_path.is_file()
+
+    # Test batch export
+    recipe2 = {
+        'image_id': img['id'],
+        'profile_id': '01_PORTRA_WARM',
+        'stack': []
+    }
+    batch_res = app_mod.export_batch_renders('batch123', [recipe, recipe2])
+    assert batch_res['count'] == 2
+    assert any('DSC09999_02_JADE_FRIO.png' in p for p in batch_res['exported'])
+    assert any('DSC09999_01_PORTRA_WARM.png' in p for p in batch_res['exported'])
+
+    # Test open folder route
+    client = TestClient(app)
+    opened_calls = []
+    monkeypatch.setattr('subprocess.Popen', lambda cmd: opened_calls.append(cmd))
+    open_res = client.post('/api/system/open-folder', json={'path': str(exported_path)})
+    assert open_res.status_code == 200
+    assert len(opened_calls) == 1

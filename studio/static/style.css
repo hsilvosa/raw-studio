@@ -338,6 +338,44 @@ output { float: right; color: var(--accent); font-variant-numeric: tabular-nums;
 hr { border: 0; border-top: 1px solid #373b3d; margin: 20px 0; }
 .controls > button { width: 100%; margin-top: 10px; }
 
+.export-actions-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+.export-buttons-row {
+  display: flex;
+  gap: 6px;
+}
+.export-buttons-row button {
+  flex: 1;
+  margin-top: 0 !important;
+  padding: 8px 6px;
+  font-size: 11.5px;
+}
+.btn-open-folder {
+  width: 100%;
+  margin-top: 0 !important;
+  font-size: 11px !important;
+  padding: 6px 10px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #1e2225 !important;
+  border: 1px solid #363c40 !important;
+  border-radius: 5px;
+  color: #bbb;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-open-folder:hover {
+  background: #282d31 !important;
+  border-color: var(--accent) !important;
+  color: #fff !important;
+}
+
 /* --- Profile Multi-Select --- */
 .profile-header-row {
   display: flex;

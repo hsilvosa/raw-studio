@@ -42,6 +42,7 @@
         <div class="lib-sel-row">
           <button type="button" id="lib-batch-tag" class="btn-mini" disabled title="Tag selected photos">+ Tag</button>
           <button type="button" id="lib-batch-folder" class="btn-mini" disabled title="Move selected to folder">Folder</button>
+          <button type="button" id="lib-batch-export" class="btn-mini" disabled title="Export developed looks for selected photos">Export</button>
           <button type="button" id="lib-delete-btn" class="btn-mini btn-danger" disabled>Delete (0)</button>
         </div>
       </div>
@@ -133,7 +134,13 @@
       <textarea id="intent" rows="3" placeholder="e.g. atardecer dorado cinematográfico con sombras azuladas y grano suave..."></textarea>
       <button class="primary" id="develop" disabled>Develop profile</button>
       <button id="all" disabled>Compare all profiles</button>
-      <button id="export" disabled>Export selection</button>
+      <div class="export-actions-wrap">
+        <div class="export-buttons-row">
+          <button type="button" id="export" class="btn-action" disabled title="Export current developed look to full-resolution PNG">Export</button>
+          <button type="button" id="export-all" class="btn-action" disabled title="Export all developed looks for this photo">Export all</button>
+        </div>
+        <button type="button" id="open-export-folder" class="btn-subtle btn-open-folder" title="Open export folder in file explorer">📁 Open export folder</button>
+      </div>
       <button id="clear-cache" class="btn-subtle btn-clear-cache" title="Delete all developed preview caches">Clear developed cache</button>
 
       <hr>

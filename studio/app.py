@@ -3,6 +3,8 @@ import json
 import math
 import os
 import shutil
+import subprocess
+import sys
 import threading
 import time
 import uuid
@@ -71,7 +73,8 @@ async def invalid(request, exc):
 
 def update(identifier, **values):
     with job_lock:
-        jobs[identifier].update(values)
+        if identifier in jobs:
+            jobs[identifier].update(values)
 
 
 def submit(fn, *args):
@@ -482,14 +485,89 @@ def export_render(job_id, recipe):
     image = library.get(recipe['image_id'])
     if library.digest(Path(image['copy'])) != image['sha256']:
         raise ValueError('The RAW copy has changed')
-    target = OUTPUT / recipe['profile_id'] / ('studio_' + image['id'])
+    profile = recipe.get('profile_id', 'custom')
+    target = OUTPUT / profile
     target.mkdir(parents=True, exist_ok=True)
-    # Fixed per-image location, immutable filenames; no folder per iteration.
-    output = target / (job_id[:12] + '.png')
-    update(job_id, message='Exporting PNG at 6000 pixels')
+    image_stem = Path(image['name']).stem
+    output = target / f"{image_stem}_{profile}.png"
+    update(job_id, message=f'Exporting {output.name} at 6000 pixels')
     engine.export(Path(image['copy']), recipe['stack'], output, 6000)
     library.save_json(output.with_suffix('.json'), recipe)
-    return {'path': str(output)}
+    return {'path': str(output), 'folder': str(target), 'filename': output.name}
+
+
+@app.post('/api/renders/batch-export')
+def export_batch_route(data: dict):
+    render_ids = data.get('render_ids', [])
+    if not render_ids:
+        raise HTTPException(400, 'No renders provided')
+    recipes = []
+    for rid in render_ids:
+        r_file = recipe_path(rid)
+        if r_file.is_file():
+            try:
+                recipes.append(json.loads(r_file.read_text(encoding='utf-8')))
+            except Exception:
+                pass
+    if not recipes:
+        raise HTTPException(404, 'No valid render recipes found')
+    return submit(export_batch_renders, recipes)
+
+
+def export_batch_renders(job_id, recipes):
+    total = len(recipes)
+    exported = []
+    last_folder = str(OUTPUT)
+    for idx, recipe in enumerate(recipes, 1):
+        try:
+            image = library.get(recipe['image_id'])
+            if library.digest(Path(image['copy'])) != image['sha256']:
+                continue
+            profile = recipe.get('profile_id', 'custom')
+            target = OUTPUT / profile
+            target.mkdir(parents=True, exist_ok=True)
+            image_stem = Path(image['name']).stem
+            output = target / f"{image_stem}_{profile}.png"
+            last_folder = str(target)
+            update(job_id, message=f'[{idx}/{total}] Exporting {output.name} at 6000 pixels')
+            engine.export(Path(image['copy']), recipe['stack'], output, 6000)
+            library.save_json(output.with_suffix('.json'), recipe)
+            exported.append(str(output))
+        except Exception as e:
+            update(job_id, message=f'[{idx}/{total}] Error exporting recipe: {str(e)}')
+    return {'exported': exported, 'count': len(exported), 'path': exported[-1] if exported else '', 'folder': last_folder}
+
+
+@app.post('/api/system/open-folder')
+def open_folder_route(data: dict):
+    path_str = data.get('path', '').strip()
+    target = None
+    if path_str:
+        p = Path(path_str).resolve()
+        if p.exists():
+            target = p
+        elif p.parent.exists():
+            target = p.parent
+    if target is None:
+        target = OUTPUT
+    if not target.is_file():
+        target.mkdir(parents=True, exist_ok=True)
+    else:
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+    try:
+        if sys.platform == 'win32':
+            if target.is_file():
+                subprocess.Popen(['explorer', f'/select,{str(target)}'])
+            else:
+                subprocess.Popen(['explorer', str(target)])
+        elif sys.platform == 'darwin':
+            subprocess.Popen(['open', str(target)])
+        else:
+            subprocess.Popen(['xdg-open', str(target)])
+        return {'status': 'ok', 'opened': str(target)}
+    except Exception as e:
+        raise HTTPException(500, f'Cannot open file browser: {str(e)}')
 
 
 
