@@ -47,16 +47,6 @@ El motor de adaptación (`studio/adaptation.py`) analiza la fotografía antes de
 - **Protección de blancos y altas luces**: Monitoriza percentiles altos de luminosidad (P98 y P99.5). En escenas con riesgo de sobreexposición, ajusta la caída de altas luces en el módulo sigmoid (`sig_highlight_rolloff`) y atenúa la exposición.
 - **Enfoque y ruido adaptativo**: Estima la varianza de ruido de alta frecuencia (`noise_sigma`). En escenas de alto ISO o ruido notable, incrementa el umbral de enfoque (`sharpen_threshold`) y eleva el perfil de reducción de ruido bilateral, evitando amplificar el grano.
 
-## Edición por zonas
-
-La interfaz y el motor de zonas (`studio/zones.py`) permiten aplicar ajustes diferenciados sobre tres regiones semánticas clave:
-
-- **Sujeto (Subject)**: Enfatiza luminosidad, calidez focal y micro-contraste en el motivo principal.
-- **Cielo (Sky)**: Permite oscurecer o saturar las altas luces atmosféricas sin afectar al primer término.
-- **Fondo (Background)**: Permite atenuar la atención, enfriar tonos o aplicar desenfoque óptico gradual (**Desenfoque / Bokeh**) respetando la profundidad.
-
-Incluye visualización de máscara en tiempo real (**Mostrar máscara rubí**) y deslizadores manuales para Luz (EV), Color (Calidez, Tinte, Saturación), Detalle y Desenfoque.
-
 ## Evaluación del modelo y perfiles
 
 Para verificar objetivamente las decisiones del modelo frente a perfiles fijos y adaptaciones algorítmicas, se incluye una suite de evaluación (`studio/evaluator.py` y `scripts/evaluate-model.py`):
@@ -65,7 +55,7 @@ Para verificar objetivamente las decisiones del modelo frente a perfiles fijos y
 python ./scripts/evaluate-model.py --profile 09_PORTRA_WARM
 ```
 
-El script compara 4 etapas en paralelo (Perfil Fijo, Adaptación Algorítmica, Modelo Qwen3-VL y Refinamiento Zonal), midiendo:
+El script compara 3 etapas en paralelo (Perfil Fijo, Adaptación Algorítmica y Modelo Qwen3-VL), midiendo:
 - Porcentaje de píxeles quemados (recorte de blancos >99.5%).
 - Porcentaje de sombras empastadas (recorte de negros <0.5%).
 - Rango dinámico efectivo (EV).

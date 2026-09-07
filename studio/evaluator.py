@@ -24,7 +24,6 @@ from PIL import Image
 from .adaptation import analyze_scene, adapt_stack
 from .recipes import profiles, make_stack, merge, validate_proposal
 from .settings import STATE, ROOT
-from .zones import generate_zone_masks, apply_zone_adjustments, DEFAULT_ZONE_PARAMS
 
 
 def evaluate_image_quality(im):
@@ -155,15 +154,6 @@ def run_evaluation(images_sample=None, profile_id='09_PORTRA_WARM'):
             except Exception as e:
                 model_reason = f"Error en modelo: {e}"
 
-        # 4. Model + Zonal Refinement
-        zonal_path = img_eval_dir / '4_zonal_refined.png'
-        source_for_zones = model_path if model_path.exists() else adapt_path
-        with Image.open(source_for_zones) as im:
-            masks = generate_zone_masks(im)
-            zonal_im = apply_zone_adjustments(im, masks, DEFAULT_ZONE_PARAMS)
-            zonal_im.save(zonal_path, 'PNG')
-            m_zonal = evaluate_image_quality(zonal_im)
-
         evaluations.append({
             'image_id': img['id'],
             'image_name': img['name'],
@@ -171,7 +161,6 @@ def run_evaluation(images_sample=None, profile_id='09_PORTRA_WARM'):
             'fixed': {'metrics': m_fixed, 'path': str(fixed_path)},
             'adapted': {'metrics': m_adapt, 'path': str(adapt_path), 'reason': adapt_reason},
             'model': {'metrics': m_model, 'path': str(model_path) if model_path.exists() else str(adapt_path), 'name': model_name, 'reason': model_reason, 'proposal': model_proposal},
-            'zonal': {'metrics': m_zonal, 'path': str(zonal_path)},
         })
 
     dt.close()
@@ -195,7 +184,6 @@ def generate_html_report(evaluations, profile_title):
         f_m = ev['fixed']['metrics']
         a_m = ev['adapted']['metrics']
         m_m = ev['model']['metrics']
-        z_m = ev['zonal']['metrics']
 
         rows.append(f"""
         <div class="card">
@@ -228,12 +216,6 @@ def generate_html_report(evaluations, profile_title):
                     <div class="metric-sub">Blancos quemados: {m_m['white_clip']*100:.2f}% | Rango EV: {m_m['dr_ev']:.2f}</div>
                     <p class="reason"><strong>Criterio visual:</strong> {ev['model']['reason']}</p>
                 </div>
-                <div class="comp-col">
-                    <h3>4. Edición Zonal (Máscaras)</h3>
-                    <img src="/api/reports/img?p={Path(ev['zonal']['path']).as_posix()}">
-                    <div class="metric">Calidad: <strong>{z_m['quality_score']}</strong> / 100</div>
-                    <div class="metric-sub">Sujeto realzado + Fondo bokeh suave + Cielo contrastado</div>
-                </div>
             </div>
         </div>
         """)
@@ -251,7 +233,7 @@ def generate_html_report(evaluations, profile_title):
         h2 {{ font-size: 18px; margin: 0 0 12px; color: #f0f0f0; }}
         .badge {{ font-size: 11px; background: #2a2e33; color: #d3b789; padding: 2px 8px; border-radius: 4px; }}
         .telemetry {{ display: flex; gap: 16px; font-size: 12px; color: #aaa; margin-bottom: 16px; background: #151719; padding: 8px 12px; border-radius: 4px; }}
-        .comparison-grid {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }}
+        .comparison-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }}
         .comp-col {{ background: #141719; border: 1px solid #2d3238; border-radius: 6px; padding: 10px; }}
         .comp-col h3 {{ font-size: 13px; font-weight: 600; margin: 0 0 8px; color: #ccc; }}
         .comp-col img {{ width: 100%; aspect-ratio: 3/2; object-fit: cover; border-radius: 4px; display: block; }}

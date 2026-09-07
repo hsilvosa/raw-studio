@@ -67,7 +67,6 @@
             <figcaption id="after-label">PROFILE</figcaption>
             <div class="img-viewport" id="viewport-after">
               <img id="after" alt="Profile result" draggable="false">
-              <img id="mask-overlay" alt="Mask preview" draggable="false" hidden>
             </div>
           </figure>
         </div>
@@ -121,58 +120,6 @@
       <button id="export" disabled>Export selection</button>
       <button id="clear-cache" class="btn-subtle btn-clear-cache" title="Delete all developed preview caches">Clear developed cache</button>
 
-      <hr>
-      <!-- Zonal Editing Section -->
-      <details class="zonal-panel" id="zonal-panel">
-        <summary class="zonal-summary">
-          <span>Zonal Editing (Máscaras)</span>
-          <span id="zonal-badge" class="badge">Off</span>
-        </summary>
-        <div class="zonal-content">
-          <div class="zonal-tabs">
-            <button type="button" class="zonal-tab active" data-zone="subject" id="tab-subject">Subject</button>
-            <button type="button" class="zonal-tab" data-zone="sky" id="tab-sky">Sky</button>
-            <button type="button" class="zonal-tab" data-zone="background" id="tab-background">Background</button>
-          </div>
-
-          <div class="zonal-toolbar">
-            <label class="check check-compact">
-              <input type="checkbox" id="zone-show-mask"> Show mask
-            </label>
-            <label class="check check-compact">
-              <input type="checkbox" id="zone-invert"> Invert
-            </label>
-          </div>
-
-          <div class="zone-sliders">
-            <label for="zone-light">Light (EV) <output id="zone-light-val">0.0 EV</output></label>
-            <input id="zone-light" type="range" min="-2.0" max="2.0" step="0.05" value="0.0">
-
-            <label for="zone-temp">Warmth / Color <output id="zone-temp-val">0</output></label>
-            <input id="zone-temp" type="range" min="-40" max="40" step="1" value="0">
-
-            <label for="zone-detail">Detail / Clarity <output id="zone-detail-val">0 %</output></label>
-            <input id="zone-detail" type="range" min="-50" max="100" step="5" value="0">
-
-            <label for="zone-blur">Defocus / Blur (Bokeh) <output id="zone-blur-val">0 px</output></label>
-            <input id="zone-blur" type="range" min="0" max="20" step="1" value="0">
-
-            <details class="mask-tuning">
-              <summary>Mask tuning</summary>
-              <label for="zone-feather">Feather radius <output id="zone-feather-val">12 px</output></label>
-              <input id="zone-feather" type="range" min="1" max="40" step="1" value="12">
-
-              <label for="zone-sens">Sensitivity threshold <output id="zone-sens-val">0</output></label>
-              <input id="zone-sens" type="range" min="-40" max="40" step="1" value="0">
-            </details>
-          </div>
-
-          <div class="zonal-actions">
-            <button type="button" id="apply-zones" class="btn-sm primary" disabled>Apply zones</button>
-            <button type="button" id="reset-zones" class="btn-sm btn-subtle" disabled>Reset</button>
-          </div>
-        </div>
-      </details>
       <hr>
       <details>
         <summary>Decisions & recipe</summary>

@@ -32,8 +32,6 @@ function buttons() {
   } else {
     $('develop').textContent = selectedProfiles.size > 1 ? `Develop ${selectedProfiles.size} profiles` : 'Develop profile';
   }
-  $('apply-zones').disabled = busy || !chosen;
-  $('reset-zones').disabled = busy || !chosen || !zonalActive;
 }
 
 async function waitJob(id, prefix = '') {
@@ -494,20 +492,6 @@ function showResult(result) {
     }
   }
 
-  // Zonal panel sync
-  zonalActive = Boolean(result.recipe?.has_zonal);
-  $('zonal-badge').textContent = zonalActive ? 'Active' : 'Off';
-  $('zonal-badge').style.color = zonalActive ? '#79d479' : '';
-  if (result.recipe?.zones_params) {
-    Object.assign(zoneParams, result.recipe.zones_params);
-  }
-  loadCurrentZoneInputs();
-  if ($('zone-show-mask').checked) {
-    updateMaskOverlay();
-  } else {
-    $('mask-overlay').hidden = true;
-  }
-
   buttons();
   updateZoomTransform();
 }
@@ -554,133 +538,6 @@ function drawResults() {
     };
     $('results').append(b);
   }
-}
-
-// --- Zonal Editing State & Logic ---
-let activeZone = 'subject';
-let zonalActive = false;
-const zoneParams = {
-  subject: { light: 0.0, contrast: 0.0, temp: 0, tint: 0, saturation: 1.0, detail: 20, blur: 0, feather: 12, sensitivity: 0, invert: false },
-  sky: { light: -0.25, contrast: 0.10, temp: -10, tint: 0, saturation: 1.15, detail: 0, blur: 0, feather: 18, sensitivity: 0, invert: false },
-  background: { light: 0.0, contrast: -0.05, temp: 0, tint: 0, saturation: 0.95, detail: -10, blur: 4, feather: 15, sensitivity: 0, invert: false },
-};
-
-function initZonalControls() {
-  const tabs = ['subject', 'sky', 'background'];
-  for (const z of tabs) {
-    $('tab-' + z).onclick = () => {
-      saveCurrentZoneInputs();
-      activeZone = z;
-      for (const other of tabs) $('tab-' + other).classList.toggle('active', other === z);
-      loadCurrentZoneInputs();
-      if ($('zone-show-mask').checked) updateMaskOverlay();
-    };
-  }
-
-  $('zone-light').oninput = () => {
-    $('zone-light-val').textContent = Number($('zone-light').value).toFixed(2) + ' EV';
-    zoneParams[activeZone].light = Number($('zone-light').value);
-  };
-  $('zone-temp').oninput = () => {
-    $('zone-temp-val').textContent = $('zone-temp').value;
-    zoneParams[activeZone].temp = Number($('zone-temp').value);
-  };
-  $('zone-detail').oninput = () => {
-    $('zone-detail-val').textContent = $('zone-detail').value + ' %';
-    zoneParams[activeZone].detail = Number($('zone-detail').value);
-  };
-  $('zone-blur').oninput = () => {
-    $('zone-blur-val').textContent = $('zone-blur').value + ' px';
-    zoneParams[activeZone].blur = Number($('zone-blur').value);
-  };
-  $('zone-feather').oninput = () => {
-    $('zone-feather-val').textContent = $('zone-feather').value + ' px';
-    zoneParams[activeZone].feather = Number($('zone-feather').value);
-    if ($('zone-show-mask').checked) debounceUpdateMaskOverlay();
-  };
-  $('zone-sens').oninput = () => {
-    $('zone-sens-val').textContent = $('zone-sens').value;
-    zoneParams[activeZone].sensitivity = Number($('zone-sens').value);
-    if ($('zone-show-mask').checked) debounceUpdateMaskOverlay();
-  };
-  $('zone-invert').onchange = () => {
-    zoneParams[activeZone].invert = $('zone-invert').checked;
-    if ($('zone-show-mask').checked) updateMaskOverlay();
-  };
-  $('zone-show-mask').onchange = () => {
-    if ($('zone-show-mask').checked) {
-      updateMaskOverlay();
-    } else {
-      $('mask-overlay').hidden = true;
-    }
-  };
-
-  $('apply-zones').onclick = () => task(async () => {
-    if (!chosen) return;
-    saveCurrentZoneInputs();
-    report('Applying zonal corrections (subject, sky, background)...');
-    const res = await api('/renders/' + chosen.render_id + '/zones/apply', { zones: zoneParams });
-    zonalActive = true;
-    $('zonal-badge').textContent = 'Active';
-    $('zonal-badge').style.color = '#79d479';
-    $('after').src = res.url;
-    buttons();
-    report('Zonal corrections applied.');
-  });
-
-  $('reset-zones').onclick = () => task(async () => {
-    if (!chosen) return;
-    report('Resetting zones to base develop...');
-    const res = await api('/renders/' + chosen.render_id + '/zones/reset', {});
-    zonalActive = false;
-    $('zonal-badge').textContent = 'Off';
-    $('zonal-badge').style.color = '';
-    $('after').src = res.url;
-    $('mask-overlay').hidden = true;
-    $('zone-show-mask').checked = false;
-    buttons();
-    report('Zonal corrections reset.');
-  });
-}
-
-function saveCurrentZoneInputs() {
-  zoneParams[activeZone].light = Number($('zone-light').value);
-  zoneParams[activeZone].temp = Number($('zone-temp').value);
-  zoneParams[activeZone].detail = Number($('zone-detail').value);
-  zoneParams[activeZone].blur = Number($('zone-blur').value);
-  zoneParams[activeZone].feather = Number($('zone-feather').value);
-  zoneParams[activeZone].sensitivity = Number($('zone-sens').value);
-  zoneParams[activeZone].invert = $('zone-invert').checked;
-}
-
-function loadCurrentZoneInputs() {
-  const p = zoneParams[activeZone];
-  $('zone-light').value = p.light;
-  $('zone-light-val').textContent = Number(p.light).toFixed(2) + ' EV';
-  $('zone-temp').value = p.temp;
-  $('zone-temp-val').textContent = p.temp;
-  $('zone-detail').value = p.detail;
-  $('zone-detail-val').textContent = p.detail + ' %';
-  $('zone-blur').value = p.blur;
-  $('zone-blur-val').textContent = p.blur + ' px';
-  $('zone-feather').value = p.feather;
-  $('zone-feather-val').textContent = p.feather + ' px';
-  $('zone-sens').value = p.sensitivity;
-  $('zone-sens-val').textContent = p.sensitivity;
-  $('zone-invert').checked = Boolean(p.invert);
-}
-
-let maskTimer = null;
-function debounceUpdateMaskOverlay() {
-  clearTimeout(maskTimer);
-  maskTimer = setTimeout(updateMaskOverlay, 150);
-}
-
-function updateMaskOverlay() {
-  if (!chosen) return;
-  const overlay = $('mask-overlay');
-  overlay.hidden = false;
-  overlay.src = `/api/renders/${chosen.render_id}/zones/mask?zone=${activeZone}&ruby=true&t=${Date.now()}`;
 }
 
 // --- Profile Multi-Select Management ---
@@ -1172,7 +1029,6 @@ async function init() {
   profiles = await api('/profiles');
   initProfileSelector();
   initPromptChips();
-  initZonalControls();
 
   for (const r of await api('/renders')) {
     const items = results.get(r.recipe.image_id) || [];
