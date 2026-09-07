@@ -100,6 +100,23 @@ Results are exported into interactive reports with side-by-side thumbnails and h
 - All processing is 100% local; no image data or telemetry ever leaves your machine.
 - All recipes are non-destructive, reproducible JSON parameter sets.
 
+## Roadmap & Future Additions
+
+Planned features and enhancements for upcoming releases:
+
+- **Interactive Local Masking & Zone Selection**:
+  - **Manual Zone Selection**: Ability to select, brush, or define radial/linear gradients over specific zones of the photo (e.g., subject, face, sky, foreground) to apply targeted exposure, contrast, and color grading locally.
+  - **AI Semantic Segmentation**: Automated subject, sky, and skin tone detection so the local model can direct adjustments to specific regions while keeping the rest balanced.
+- **Model Improvements & Fine-Tuning**:
+  - **Domain Fine-Tuning**: Training and fine-tuning the vision-language model on master darkroom datasets, film stocks, and professional color grading corpora for deeper aesthetic precision.
+  - **Multi-Turn Conversational Refinement**: Iteratively refine develops through conversational prompts (e.g. *"lift shadows by 0.5 EV and add a subtle cyan bias to the highlights"*).
+  - **Inference Optimization**: Context caching, weight quantization, and faster token generation to minimize development latency on local GPUs and Apple Silicon/DirectML.
+- **Workflow & Color Science Expansions**:
+  - **3D LUT Export (`.cube`)**: Export developed looks as standard 3D LUTs for use in video editing suites (DaVinci Resolve, Premiere Pro, Final Cut).
+  - **External RAW Editor Sidecars**: Export recipes as compatible Lightroom and Capture One sidecar files (`.xmp`).
+  - **Custom Profile Creation**: Upload reference photographs or color palettes to extract and save reusable custom profiles.
+  - **Multi-Photo Batch Developing**: Apply profiles, prompts, or model adaptations across multiple selected library images in a single batch operation.
+
 ## Testing
 
 Run the automated test suite with pytest:
