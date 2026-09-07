@@ -112,9 +112,6 @@ Planned features and enhancements for upcoming releases:
   - **Multi-Turn Conversational Refinement**: Iteratively refine develops through conversational prompts (e.g. *"lift shadows by 0.5 EV and add a subtle cyan bias to the highlights"*).
   - **Inference Optimization**: Context caching, weight quantization, and faster token generation to minimize development latency on local GPUs and Apple Silicon/DirectML.
 - **Workflow & Color Science Expansions**:
-  - **3D LUT Export (`.cube`)**: Export developed looks as standard 3D LUTs for use in video editing suites (DaVinci Resolve, Premiere Pro, Final Cut).
-  - **External RAW Editor Sidecars**: Export recipes as compatible Lightroom and Capture One sidecar files (`.xmp`).
-  - **Custom Profile Creation**: Upload reference photographs or color palettes to extract and save reusable custom profiles.
   - **Multi-Photo Batch Developing**: Apply profiles, prompts, or model adaptations across multiple selected library images in a single batch operation.
 
 ## Testing
@@ -126,6 +123,10 @@ python -m pytest tests -v
 ```
 
 Tests verify the local model supervisor, photographic adaptation engine, library database migrations, safety contract bounds, and path traversal isolation.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](file:///d:/FOTOS/revelado-local/LICENSE) file for details.
 
 ---
 See [CHANGELOG.md](file:///d:/FOTOS/revelado-local/CHANGELOG.md) for version history and updates.
