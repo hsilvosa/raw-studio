@@ -2,22 +2,33 @@
 
 A local application for comparing color profiles, organizing libraries, and developing RAW photographs using darktable. The local vision-language model only proposes bounded numerical parameters for darktable modules. There is no generative AI hallucination, image reconstruction, or inpainting.
 
-## Quick Start
+## Installation & Setup
 
-From PowerShell inside this directory:
+### Prerequisites
+- Python 3.10+
+- [darktable](https://www.darktable.org/) with experimental `darktable-mcp` binary support (can be configured via `DARKTABLE_MCP` environment variable if not in PATH).
 
-```powershell
-./run.ps1
+### 1. Install Dependencies
+Create and activate your preferred Python environment (venv, conda, etc.), then install requirements:
+
+```bash
+pip install -r requirements.txt
 ```
 
-Open `http://127.0.0.1:8765`. The launcher automatically uses the `wuxia` Conda environment if available; on other systems, install `requirements.txt` into a Python environment and run:
+### 2. Launch the Application
+- **Using the PowerShell launcher (Windows):**
+  ```powershell
+  ./run.ps1
+  ```
+- **Or directly with Uvicorn:**
+  ```bash
+  python -m uvicorn studio.app:app --host 127.0.0.1 --port 8765
+  ```
 
-```powershell
-python -m uvicorn studio.app:app --host 127.0.0.1 --port 8765
-```
+Once started, open your web browser at `http://127.0.0.1:8765`.
 
 > [!NOTE]
-> darktable must include the experimental `darktable-mcp.exe` binary. Standard stable builds do not include it. You can specify its path using the `DARKTABLE_MCP` environment variable. The bridge communicates over stdio JSON-RPC using an in-memory library and `write_sidecar_files=never`.
+> darktable communicates over stdio JSON-RPC using an in-memory library and `write_sidecar_files=never`. Your original RAW files and sidecars are never modified.
 
 ## Core Features
 
