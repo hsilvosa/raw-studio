@@ -21,6 +21,24 @@ async function api(path, body) {
 
 function report(text) {
   $('status').textContent = text;
+  if (!text || (!text.startsWith('Saved to ') && !text.startsWith('Exported ') && !text.startsWith('Opened in file explorer: '))) {
+    hideExportActions();
+  }
+}
+
+function showExportActions(path) {
+  lastExportedPath = path || '';
+  const actions = $('status-actions');
+  if (actions) {
+    actions.style.display = path ? 'inline-flex' : 'none';
+  }
+}
+
+function hideExportActions() {
+  const actions = $('status-actions');
+  if (actions) {
+    actions.style.display = 'none';
+  }
 }
 
 function buttons() {
@@ -1022,7 +1040,6 @@ $('develop').onclick = () => task(() => developBatch([...selectedProfiles]));
 $('all').onclick = () => task(() => developBatch(profiles.filter(p => p.id !== '00_PROMPT_IA').map(p => p.id)));
 
 $('export').onclick = () => task(async () => {
-
   let renderIdsToExport = [];
   if (selectedRenders.size > 0) {
     renderIdsToExport = [...selectedRenders];
@@ -1045,23 +1062,9 @@ $('export').onclick = () => task(async () => {
     report(`Exported ${r.count || renderIdsToExport.length} photos to ${r.folder || 'export folder'}`);
   }
   if (lastExportedPath) {
-    showExportedPath(lastExportedPath);
-  }
-  if ($('open-export-folder')) {
-    $('open-export-folder').textContent = '📁 Show in Explorer';
+    showExportActions(lastExportedPath);
   }
 });
-
-function showExportedPath(path) {
-  if (!path) return;
-  const box = $('export-path-box');
-  const text = $('export-path-text');
-  if (box && text) {
-    box.style.display = 'flex';
-    text.textContent = path;
-    text.title = path;
-  }
-}
 
 
 function openExportModal() {
@@ -1175,31 +1178,28 @@ if ($('confirm-export-dialog')) {
   };
 }
 
-if ($('open-export-folder')) {
-  $('open-export-folder').onclick = async () => {
+if ($('status-open-folder')) {
+  $('status-open-folder').onclick = async () => {
+    if (!lastExportedPath) return;
     try {
       const res = await api('/system/open-folder', { path: lastExportedPath });
-      const shownPath = res.folder || res.opened || '';
-      showExportedPath(shownPath);
+      const shownPath = res.folder || res.opened || lastExportedPath;
       report('Opened in file explorer: ' + shownPath);
-      if (navigator.clipboard && shownPath) {
-        try { await navigator.clipboard.writeText(shownPath); } catch (_) {}
-      }
+      showExportActions(lastExportedPath);
     } catch (e) {
       report(e.message);
     }
   };
 }
 
-if ($('copy-export-path')) {
-  $('copy-export-path').onclick = async () => {
-    const text = $('export-path-text')?.textContent || lastExportedPath;
-    if (text && navigator.clipboard) {
+if ($('status-copy-path')) {
+  $('status-copy-path').onclick = async () => {
+    if (lastExportedPath && navigator.clipboard) {
       try {
-        await navigator.clipboard.writeText(text);
-        const btn = $('copy-export-path');
+        await navigator.clipboard.writeText(lastExportedPath);
+        const btn = $('status-copy-path');
         btn.textContent = 'Copied';
-        setTimeout(() => { if ($('copy-export-path')) $('copy-export-path').textContent = 'Copy'; }, 2000);
+        setTimeout(() => { if ($('status-copy-path')) $('status-copy-path').textContent = 'Copy'; }, 2000);
       } catch (_) {}
     }
   };
@@ -1222,12 +1222,9 @@ if ($('lib-batch-export')) {
     const j = await api('/renders/batch-export', { render_ids: renderIds });
     const r = await waitJob(j.job_id);
     lastExportedPath = r.path || r.folder || '';
-    if (lastExportedPath) {
-      showExportedPath(lastExportedPath);
-    }
     report(`Exported ${r.count || renderIds.length} photos to ${r.folder || 'export folder'}`);
-    if ($('open-export-folder')) {
-      $('open-export-folder').textContent = '📁 Show in Explorer';
+    if (lastExportedPath) {
+      showExportActions(lastExportedPath);
     }
   });
 }

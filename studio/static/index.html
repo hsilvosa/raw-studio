@@ -88,7 +88,13 @@
           </figure>
         </div>
       </div>
-      <div class="status" role="status" aria-live="polite" id="status">Ready to import</div>
+      <div class="status-bar" id="status-bar">
+        <span class="status-message" role="status" aria-live="polite" id="status">Ready to import</span>
+        <div class="status-actions" id="status-actions" style="display: none;">
+          <button type="button" id="status-open-folder" class="btn-status-action" title="Open in File Explorer">Show in File Explorer</button>
+          <button type="button" id="status-copy-path" class="btn-status-action btn-status-copy" title="Copy path to clipboard">Copy</button>
+        </div>
+      </div>
       <div id="results" class="results"></div>
     </section>
     <aside class="controls">
@@ -138,11 +144,6 @@
         <div class="export-buttons-row">
           <button type="button" id="export" class="btn-action" disabled title="Export current developed look (or selected ones)">Export</button>
           <button type="button" id="open-export-modal" class="btn-action btn-subtle" disabled title="Select which developed looks to export">Choose...</button>
-        </div>
-        <button type="button" id="open-export-folder" class="btn-subtle btn-open-folder" title="Open export folder in file explorer">📁 Open export folder</button>
-        <div id="export-path-box" class="export-path-box" style="display: none;">
-          <span id="export-path-text" class="export-path-text" title=""></span>
-          <button type="button" id="copy-export-path" class="btn-copy-path" title="Copy full path to clipboard">Copy</button>
         </div>
       </div>
       <button id="clear-cache" class="btn-subtle btn-clear-cache" title="Delete all developed preview caches">Clear developed cache</button>
