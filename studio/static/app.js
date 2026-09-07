@@ -1,9 +1,11 @@
 const $ = id => document.getElementById(id);
 
 let images = [], profiles = [], current = null, chosen = null, busy = false;
+let lastExportedPath = '';
 const results = new Map(), selected = new Set();
 const selectedProfiles = new Set();
 const selectedRenders = new Set();
+
 
 // --- API & Tasks ---
 async function api(path, body) {

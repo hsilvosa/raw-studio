@@ -538,6 +538,55 @@ def export_batch_renders(job_id, recipes):
     return {'exported': exported, 'count': len(exported), 'path': exported[-1] if exported else '', 'folder': last_folder}
 
 
+def open_in_file_manager(target: Path):
+    """
+    Opens the operating system file manager.
+    If target is a file, attempts to highlight/select it in the folder view.
+    If target is a directory, opens that directory.
+    """
+    if sys.platform == 'win32':
+        opened = False
+        target_str = str(target)
+        if target.is_file():
+            try:
+                import ctypes
+                ret = ctypes.windll.shell32.ShellExecuteW(None, 'open', 'explorer.exe', f'/select,"{target_str}"', None, 1)
+                if ret > 32:
+                    opened = True
+            except Exception:
+                pass
+            if not opened:
+                try:
+                    os.startfile(str(target.parent))
+                    opened = True
+                except Exception:
+                    pass
+        else:
+            try:
+                os.startfile(target_str)
+                opened = True
+            except Exception:
+                pass
+        if not opened:
+            try:
+                arg = f'/select,"{target_str}"' if target.is_file() else f'"{target_str}"'
+                subprocess.Popen(f'explorer.exe {arg}', shell=True)
+                opened = True
+            except Exception:
+                pass
+        return opened
+    elif sys.platform == 'darwin':
+        if target.is_file():
+            subprocess.Popen(['open', '-R', str(target)])
+        else:
+            subprocess.Popen(['open', str(target)])
+        return True
+    else:
+        folder = target if target.is_dir() else target.parent
+        subprocess.Popen(['xdg-open', str(folder)])
+        return True
+
+
 @app.post('/api/system/open-folder')
 def open_folder_route(data: dict):
     path_str = data.get('path', '').strip()
@@ -556,18 +605,11 @@ def open_folder_route(data: dict):
         target.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        if sys.platform == 'win32':
-            if target.is_file():
-                subprocess.Popen(f'explorer.exe /select,"{str(target)}"')
-            else:
-                os.startfile(str(target))
-        elif sys.platform == 'darwin':
-            subprocess.Popen(['open', str(target)])
-        else:
-            subprocess.Popen(['xdg-open', str(target)])
+        open_in_file_manager(target)
         return {'status': 'ok', 'opened': str(target)}
     except Exception as e:
         raise HTTPException(500, f'Cannot open file browser: {str(e)}')
+
 
 
 

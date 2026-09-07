@@ -168,7 +168,9 @@ def test_export_naming_and_batch(tmp_path, monkeypatch):
     # Test open folder route
     client = TestClient(app)
     opened_calls = []
-    monkeypatch.setattr('subprocess.Popen', lambda cmd: opened_calls.append(cmd))
+    monkeypatch.setattr(app_mod, 'open_in_file_manager', lambda p: opened_calls.append(p))
     open_res = client.post('/api/system/open-folder', json={'path': str(exported_path)})
     assert open_res.status_code == 200
     assert len(opened_calls) == 1
+    assert opened_calls[0] == exported_path
+
