@@ -1021,9 +1021,8 @@ async function developBatch(profileIds) {
 $('develop').onclick = () => task(() => developBatch([...selectedProfiles]));
 $('all').onclick = () => task(() => developBatch(profiles.filter(p => p.id !== '00_PROMPT_IA').map(p => p.id)));
 
-let lastExportedPath = '';
-
 $('export').onclick = () => task(async () => {
+
   let renderIdsToExport = [];
   if (selectedRenders.size > 0) {
     renderIdsToExport = [...selectedRenders];
