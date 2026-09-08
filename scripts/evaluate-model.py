@@ -40,6 +40,8 @@ def main():
         if ev['model'].get('name'):
             print(f"  • Modelo Qwen3-VL:   Calidad={ev['model']['metrics']['quality_score']} | Quemados={ev['model']['metrics']['white_clip']*100:.2f}% | Rango EV={ev['model']['metrics']['dr_ev']:.2f}")
             print(f"    Criterio: {ev['model']['reason']}")
+        if 'zonal' in ev:
+            print(f"  • Zonas (Máscaras):  Calidad={ev['zonal']['metrics']['quality_score']} | Sujeto realzado + Fondo bokeh")
 
     print("\n-----------------------------------------------------------------")
     print(f"Reporte visual HTML generado en: {report_path.resolve()}")

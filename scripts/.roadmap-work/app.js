@@ -67,21 +67,6 @@ function buttons() {
   } else {
     $('develop').textContent = selectedProfiles.size > 1 ? `Develop ${selectedProfiles.size} profiles` : 'Develop profile';
   }
-  const applyZonesBtn = $('apply-zones');
-  const resetZonesBtn = $('reset-zones');
-  const autoBalanceBtn = $('auto-balance-zones');
-  if (applyZonesBtn) {
-    applyZonesBtn.disabled = busy || !current;
-    applyZonesBtn.title = !current ? 'Select a photo first' : 'Apply zonal corrections to photo';
-  }
-  if (resetZonesBtn) {
-    resetZonesBtn.disabled = busy || !current || !zonalActive;
-    resetZonesBtn.title = !current ? 'Select a photo first' : (!zonalActive ? 'No active zonal adjustments to reset' : 'Reset all zonal adjustments');
-  }
-  if (autoBalanceBtn) {
-    autoBalanceBtn.disabled = busy || !current;
-    autoBalanceBtn.title = !current ? 'Select a photo first' : 'AI automatically calculates optimal adjustments per zone';
-  }
 }
 
 async function waitJob(id, prefix = '') {
@@ -150,7 +135,7 @@ function updateZoomTransform() {
   }
 
   const transformStyle = `translate3d(${panX}px, ${panY}px, 0px) scale(${zoomScale})`;
-  for (const imgId of ['before', 'after', 'mask-overlay', 'mask-canvas']) {
+  for (const imgId of ['before', 'after', 'mask-overlay']) {
     const img = $(imgId);
     if (img) {
       img.style.width = naturalWidth + 'px';
@@ -193,36 +178,6 @@ function setZoom100() {
   updateZoomTransform();
 }
 
-let spacePressed = false;
-window.addEventListener('keydown', e => {
-  if (e.code === 'Space' && !['input', 'textarea'].includes((document.activeElement?.tagName || '').toLowerCase())) {
-    spacePressed = true;
-    const canvas = $('mask-canvas');
-    if (canvas) {
-      canvas.classList.remove('brush-active');
-      canvas.classList.add('cursor-grab');
-    }
-    const brushCursor = $('brush-cursor');
-    if (brushCursor) brushCursor.hidden = true;
-    vpBefore.classList.add('can-pan');
-    vpAfter.classList.add('can-pan');
-  }
-});
-window.addEventListener('keyup', e => {
-  if (e.code === 'Space') {
-    spacePressed = false;
-    const canvas = $('mask-canvas');
-    if (canvas) {
-      canvas.classList.remove('cursor-grab');
-      if (activeZone === 'brush') canvas.classList.add('brush-active');
-    }
-    if (zoomMode === 'fit') {
-      vpBefore.classList.remove('can-pan');
-      vpAfter.classList.remove('can-pan');
-    }
-  }
-});
-
 // Attach zoom and pan event listeners to viewports
 for (const vp of viewports) {
   vp.addEventListener('wheel', e => {
@@ -232,40 +187,7 @@ for (const vp of viewports) {
   }, { passive: false });
 
   vp.addEventListener('mousedown', e => {
-    if (e.button === 1) {
-      // Middle-click pan always allowed anywhere
-      isDragging = true;
-      lastDragX = e.clientX;
-      lastDragY = e.clientY;
-      vpBefore.classList.add('panning');
-      vpAfter.classList.add('panning');
-      e.preventDefault();
-      return;
-    }
     if (e.button !== 0) return;
-
-    // Spacebar held: pan always allowed
-    if (spacePressed) {
-      isDragging = true;
-      lastDragX = e.clientX;
-      lastDragY = e.clientY;
-      vpBefore.classList.add('panning');
-      vpAfter.classList.add('panning');
-      e.preventDefault();
-      return;
-    }
-
-    // In viewport-after, when using manual tools (brush, radial, linear), NEVER pan on left click!
-    const isManualTool = ['brush', 'radial', 'linear'].includes(activeZone);
-    if (vp === vpAfter && isManualTool) {
-      return;
-    }
-
-    // In 'fit' mode, normal left-click dragging does NOT pan (prevents accidental sliding of fitted photo)
-    if (zoomMode === 'fit') {
-      return;
-    }
-
     isDragging = true;
     lastDragX = e.clientX;
     lastDragY = e.clientY;
@@ -868,46 +790,18 @@ async function refresh() {
 }
 
 
-async function ensureActiveRender() {
-  if (chosen) return chosen;
-  if (!current) return null;
-  const existing = results.get(current.id) || [];
-  if (existing.length > 0) {
-    showResult(existing[existing.length - 1]);
-    return chosen;
-  }
-  report('Creating initial develop for photo...');
-  const pid = (selectedProfiles.size ? [...selectedProfiles][0] : '') || '00_NEUTRAL';
-  await develop(pid);
-  return chosen;
-}
-
 function select(im) {
   current = im;
+  chosen = null;
   selectedRenders.clear();
   $('filename').textContent = im.name;
   $('empty').hidden = true;
   $('pair').hidden = false;
   $('before').src = '/api/images/' + im.id + '/preview';
-
-  const existing = results.get(im.id) || [];
-  if (existing.length > 0) {
-    showResult(existing[existing.length - 1]);
-  } else {
-    chosen = null;
-    $('after').src = $('before').src;
-    $('after-label').textContent = 'BASE DEVELOP';
-    $('reason').textContent = 'Ready to develop profile or apply local zones.';
-    $('recipe').textContent = '';
-    zonalActive = false;
-    if ($('zonal-badge')) {
-      $('zonal-badge').textContent = 'Off';
-      $('zonal-badge').style.color = '';
-    }
-    if ($('mask-overlay')) $('mask-overlay').hidden = true;
-    redrawCanvas();
-  }
-
+  $('after').src = $('before').src;
+  $('after-label').textContent = 'NO PROFILE';
+  $('reason').textContent = 'Select a profile and click Develop.';
+  $('recipe').textContent = '';
   drawResults();
   buttons();
   zoomMode = 'fit';
@@ -933,26 +827,6 @@ function showResult(result) {
     if (isActive) {
       b.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
     }
-  }
-
-  // Zonal panel sync
-  zonalActive = Boolean(result.recipe?.has_zonal);
-  if ($('zonal-badge')) {
-    $('zonal-badge').textContent = zonalActive ? 'Active' : 'Off';
-    $('zonal-badge').style.color = zonalActive ? '#79d479' : '';
-  }
-  if (result.recipe?.zones_params) {
-    Object.assign(zoneParams, result.recipe.zones_params);
-  }
-  if (result.recipe?.manual_masks) {
-    Object.assign(manualMasks, result.recipe.manual_masks);
-  }
-  loadCurrentZoneInputs();
-  redrawCanvas();
-  if ($('zone-show-mask')?.checked) {
-    updateMaskOverlay();
-  } else if ($('mask-overlay')) {
-    $('mask-overlay').hidden = true;
   }
 
   buttons();
@@ -1018,503 +892,6 @@ function drawResults() {
     };
     $('results').append(b);
   }
-}
-
-// --- Zonal Editing State & Logic ---
-let activeZone = 'subject';
-let zonalActive = false;
-let brushMode = 'paint'; // 'paint' or 'erase'
-let brushSize = 35;
-let isDrawing = false;
-let currentStroke = null;
-
-const zoneParams = {
-  subject: { light: 0.0, contrast: 0.0, temp: 0, tint: 0, saturation: 1.0, detail: 20, blur: 0, feather: 12, sensitivity: 0, invert: false },
-  sky: { light: -0.25, contrast: 0.10, temp: -10, tint: 0, saturation: 1.15, detail: 0, blur: 0, feather: 18, sensitivity: 0, invert: false },
-  skin: { light: 0.15, contrast: -0.05, temp: 5, tint: 0, saturation: 1.0, detail: -10, blur: 0, feather: 14, sensitivity: 0, invert: false },
-  background: { light: 0.0, contrast: -0.05, temp: 0, tint: 0, saturation: 0.95, detail: -10, blur: 4, feather: 15, sensitivity: 0, invert: false },
-  foreground: { light: 0.0, contrast: 0.05, temp: 0, tint: 0, saturation: 1.0, detail: 15, blur: 0, feather: 12, sensitivity: 0, invert: false },
-  brush: { light: 0.35, contrast: 0.0, temp: 0, tint: 0, saturation: 1.0, detail: 20, blur: 0, feather: 10, sensitivity: 0, invert: false },
-  radial: { light: 0.25, contrast: 0.05, temp: 0, tint: 0, saturation: 1.0, detail: 10, blur: 0, feather: 20, sensitivity: 0, invert: false },
-  linear: { light: -0.30, contrast: 0.10, temp: -8, tint: 0, saturation: 1.10, detail: 0, blur: 0, feather: 25, sensitivity: 0, invert: false },
-};
-
-const manualMasks = {
-  brush: { strokes: [], feather: 10 },
-  radial: { cx: 0.5, cy: 0.5, rx: 0.3, ry: 0.3, angle: 0, feather: 20 },
-  linear: { x1: 0.5, y1: 0.2, x2: 0.5, y2: 0.8, feather: 25 },
-};
-
-let maskTimer = null;
-function debounceUpdateMaskOverlay() {
-  clearTimeout(maskTimer);
-  maskTimer = setTimeout(updateMaskOverlay, 180);
-}
-
-function updateMaskOverlay() {
-  if (!chosen) return;
-  const overlay = $('mask-overlay');
-  if (!overlay) return;
-  overlay.hidden = false;
-  overlay.src = `/api/renders/${chosen.render_id}/zones/mask?zone=${activeZone}&ruby=true&t=${Date.now()}`;
-}
-
-function saveCurrentZoneInputs() {
-  if (!zoneParams[activeZone]) return;
-  zoneParams[activeZone].light = Number($('zone-light').value);
-  zoneParams[activeZone].contrast = Number($('zone-contrast').value);
-  zoneParams[activeZone].temp = Number($('zone-temp').value);
-  zoneParams[activeZone].tint = Number($('zone-tint').value);
-  zoneParams[activeZone].saturation = Number($('zone-sat').value);
-  zoneParams[activeZone].detail = Number($('zone-detail').value);
-  zoneParams[activeZone].blur = Number($('zone-blur').value);
-  zoneParams[activeZone].feather = Number($('zone-feather').value);
-  zoneParams[activeZone].sensitivity = Number($('zone-sens').value);
-  zoneParams[activeZone].invert = $('zone-invert').checked;
-}
-
-function loadCurrentZoneInputs() {
-  const p = zoneParams[activeZone] || zoneParams['subject'];
-  if ($('zone-light')) {
-    $('zone-light').value = p.light ?? 0;
-    $('zone-light-val').textContent = Number(p.light ?? 0).toFixed(2) + ' EV';
-  }
-  if ($('zone-contrast')) {
-    $('zone-contrast').value = p.contrast ?? 0;
-    $('zone-contrast-val').textContent = Number(p.contrast ?? 0).toFixed(2);
-  }
-  if ($('zone-temp')) {
-    $('zone-temp').value = p.temp ?? 0;
-    $('zone-temp-val').textContent = p.temp ?? 0;
-  }
-  if ($('zone-tint')) {
-    $('zone-tint').value = p.tint ?? 0;
-    $('zone-tint-val').textContent = p.tint ?? 0;
-  }
-  if ($('zone-sat')) {
-    $('zone-sat').value = p.saturation ?? 1.0;
-    $('zone-sat-val').textContent = Number(p.saturation ?? 1.0).toFixed(2) + 'x';
-  }
-  if ($('zone-detail')) {
-    $('zone-detail').value = p.detail ?? 0;
-    $('zone-detail-val').textContent = (p.detail ?? 0) + ' %';
-  }
-  if ($('zone-blur')) {
-    $('zone-blur').value = p.blur ?? 0;
-    $('zone-blur-val').textContent = (p.blur ?? 0) + ' px';
-  }
-  if ($('zone-feather')) {
-    $('zone-feather').value = p.feather ?? 12;
-    $('zone-feather-val').textContent = (p.feather ?? 12) + ' px';
-  }
-  if ($('zone-sens')) {
-    $('zone-sens').value = p.sensitivity ?? 0;
-    $('zone-sens-val').textContent = p.sensitivity ?? 0;
-  }
-  if ($('zone-invert')) {
-    $('zone-invert').checked = Boolean(p.invert);
-  }
-}
-
-function redrawCanvas() {
-  const canvas = $('mask-canvas');
-  if (!canvas || !naturalWidth || !naturalHeight) return;
-  if (canvas.width !== naturalWidth || canvas.height !== naturalHeight) {
-    canvas.width = naturalWidth;
-    canvas.height = naturalHeight;
-  }
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const isManual = ['brush', 'radial', 'linear'].includes(activeZone);
-  canvas.hidden = !isManual;
-  canvas.style.pointerEvents = isManual ? 'auto' : 'none';
-  canvas.classList.toggle('brush-active', activeZone === 'brush' && !spacePressed);
-  if (!isManual) return;
-
-  if (activeZone === 'brush') {
-    const strokes = manualMasks.brush?.strokes || [];
-    for (const s of strokes) {
-      ctx.beginPath();
-      ctx.fillStyle = s.erase ? 'rgba(40,40,40,0.65)' : 'rgba(240,45,55,0.35)';
-      ctx.strokeStyle = s.erase ? 'rgba(40,40,40,0.65)' : 'rgba(240,45,55,0.35)';
-      ctx.lineWidth = s.radius * 2;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      if (s.path && s.path.length > 0) {
-        ctx.moveTo(s.path[0].x * naturalWidth, s.path[0].y * naturalHeight);
-        for (let i = 1; i < s.path.length; i++) {
-          ctx.lineTo(s.path[i].x * naturalWidth, s.path[i].y * naturalHeight);
-        }
-        ctx.stroke();
-      } else if (s.x !== undefined && s.y !== undefined) {
-        ctx.arc(s.x * naturalWidth, s.y * naturalHeight, s.radius, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-  } else if (activeZone === 'radial') {
-    const r = manualMasks.radial;
-    const cx = r.cx * naturalWidth;
-    const cy = r.cy * naturalHeight;
-    const rx = r.rx * naturalWidth;
-    const ry = r.ry * naturalHeight;
-
-    ctx.save();
-    ctx.translate(cx, cy);
-    ctx.rotate((r.angle || 0) * Math.PI / 180);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(211, 183, 137, 0.9)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(0, 0, 4, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(211, 183, 137, 1)';
-    ctx.fill();
-    ctx.restore();
-  } else if (activeZone === 'linear') {
-    const l = manualMasks.linear;
-    const x1 = l.x1 * naturalWidth;
-    const y1 = l.y1 * naturalHeight;
-    const x2 = l.x2 * naturalWidth;
-    const y2 = l.y2 * naturalHeight;
-
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.strokeStyle = 'rgba(211, 183, 137, 0.9)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(x1, y1, 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#d3b789';
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.arc(x2, y2, 5, 0, Math.PI * 2);
-    ctx.fillStyle = '#79d479';
-    ctx.fill();
-
-    const mx = (x1 + x2) / 2;
-    const my = (y1 + y2) / 2;
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const len = Math.hypot(dx, dy) || 1;
-    const perpX = -dy / len;
-    const perpY = dx / len;
-    const lineLen = Math.max(100, len * 0.8);
-
-    ctx.beginPath();
-    ctx.setLineDash([4, 4]);
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.moveTo(mx - perpX * lineLen, my - perpY * lineLen);
-    ctx.lineTo(mx + perpX * lineLen, my + perpY * lineLen);
-    ctx.stroke();
-    ctx.restore();
-  }
-}
-
-function initZonalControls() {
-  const allTabs = ['subject', 'sky', 'skin', 'background', 'foreground', 'brush', 'radial', 'linear'];
-  for (const z of allTabs) {
-    const btn = $('tab-' + z);
-    if (!btn) continue;
-    btn.onclick = () => {
-      saveCurrentZoneInputs();
-      activeZone = z;
-      for (const other of allTabs) {
-        const otherBtn = $('tab-' + other);
-        if (otherBtn) otherBtn.classList.toggle('active', other === z);
-      }
-      const isManual = ['brush', 'radial', 'linear'].includes(z);
-      if ($('manual-tool-bar')) $('manual-tool-bar').hidden = !isManual;
-      if ($('brush-options')) $('brush-options').hidden = (z !== 'brush');
-      if ($('radial-options')) $('radial-options').hidden = (z !== 'radial');
-      if ($('linear-options')) $('linear-options').hidden = (z !== 'linear');
-
-      if (z !== 'brush' && brushCursor) brushCursor.hidden = true;
-      loadCurrentZoneInputs();
-      redrawCanvas();
-      if ($('zone-show-mask')?.checked) updateMaskOverlay();
-    };
-  }
-
-  if ($('brush-size')) {
-    $('brush-size').oninput = () => {
-      brushSize = Number($('brush-size').value);
-      $('brush-size-val').textContent = brushSize + ' px';
-      if (brushCursor && !brushCursor.hidden) {
-        const diameter = Math.max(8, brushSize * 2 * zoomScale);
-        brushCursor.style.width = diameter + 'px';
-        brushCursor.style.height = diameter + 'px';
-      }
-    };
-  }
-  if ($('brush-mode-paint')) {
-    $('brush-mode-paint').onclick = () => {
-      brushMode = 'paint';
-      $('brush-mode-paint').classList.add('active');
-      $('brush-mode-erase').classList.remove('active');
-      if (brushCursor) brushCursor.classList.remove('erase-mode');
-    };
-  }
-  if ($('brush-mode-erase')) {
-    $('brush-mode-erase').onclick = () => {
-      brushMode = 'erase';
-      $('brush-mode-erase').classList.add('active');
-      $('brush-mode-paint').classList.remove('active');
-      if (brushCursor) brushCursor.classList.add('erase-mode');
-    };
-  }
-  if ($('brush-clear-strokes')) {
-    $('brush-clear-strokes').onclick = () => {
-      manualMasks.brush.strokes = [];
-      redrawCanvas();
-      if ($('zone-show-mask')?.checked) updateMaskOverlay();
-    };
-  }
-  if ($('radial-reset-shape')) {
-    $('radial-reset-shape').onclick = () => {
-      manualMasks.radial = { cx: 0.5, cy: 0.5, rx: 0.3, ry: 0.3, angle: 0, feather: 20 };
-      redrawCanvas();
-      if ($('zone-show-mask')?.checked) updateMaskOverlay();
-    };
-  }
-  if ($('linear-reset-shape')) {
-    $('linear-reset-shape').onclick = () => {
-      manualMasks.linear = { x1: 0.5, y1: 0.2, x2: 0.5, y2: 0.8, feather: 25 };
-      redrawCanvas();
-      if ($('zone-show-mask')?.checked) updateMaskOverlay();
-    };
-  }
-
-  const canvas = $('mask-canvas');
-  const brushCursor = $('brush-cursor');
-  let dragStartPos = null;
-
-  function updateBrushCursor(e) {
-    if (!brushCursor || activeZone !== 'brush' || spacePressed) {
-      if (brushCursor) brushCursor.hidden = true;
-      return;
-    }
-    const vpRect = vpAfter.getBoundingClientRect();
-    const x = e.clientX - vpRect.left;
-    const y = e.clientY - vpRect.top;
-    if (x < 0 || y < 0 || x > vpRect.width || y > vpRect.height) {
-      brushCursor.hidden = true;
-      return;
-    }
-    brushCursor.hidden = false;
-    const diameter = Math.max(8, brushSize * 2 * zoomScale);
-    brushCursor.style.width = diameter + 'px';
-    brushCursor.style.height = diameter + 'px';
-    brushCursor.style.left = x + 'px';
-    brushCursor.style.top = y + 'px';
-    brushCursor.classList.toggle('erase-mode', brushMode === 'erase');
-  }
-
-  vpAfter.addEventListener('pointerenter', updateBrushCursor);
-  vpAfter.addEventListener('pointerleave', () => { if (brushCursor) brushCursor.hidden = true; });
-  vpAfter.addEventListener('pointermove', updateBrushCursor);
-
-  function getCanvasCoords(e) {
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / zoomScale;
-    const y = (e.clientY - rect.top) / zoomScale;
-    const nx = Math.max(0, Math.min(1, x / naturalWidth));
-    const ny = Math.max(0, Math.min(1, y / naturalHeight));
-    return { x, y, nx, ny };
-  }
-
-  if (canvas) {
-    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
-
-    canvas.addEventListener('mousedown', (e) => {
-      if (e.button === 1) return; // Allow middle-click to bubble
-      if (!spacePressed && e.button === 0) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-    });
-
-    canvas.addEventListener('pointerdown', (e) => {
-      if (spacePressed || e.button !== 0) return;
-      if (!['brush', 'radial', 'linear'].includes(activeZone)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      canvas.setPointerCapture(e.pointerId);
-      isDrawing = true;
-      const pt = getCanvasCoords(e);
-      dragStartPos = pt;
-
-      if (activeZone === 'brush') {
-        currentStroke = {
-          radius: brushSize,
-          erase: brushMode === 'erase',
-          path: [{ x: pt.nx, y: pt.ny }]
-        };
-        manualMasks.brush.strokes.push(currentStroke);
-        redrawCanvas();
-        updateBrushCursor(e);
-      }
-    });
-
-    canvas.addEventListener('pointermove', (e) => {
-      if (activeZone === 'brush') updateBrushCursor(e);
-      if (!isDrawing) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const pt = getCanvasCoords(e);
-
-      if (activeZone === 'brush' && currentStroke) {
-        currentStroke.path.push({ x: pt.nx, y: pt.ny });
-        redrawCanvas();
-      } else if (activeZone === 'radial' && dragStartPos) {
-        const rx = Math.max(0.04, Math.abs(pt.nx - dragStartPos.nx));
-        const ry = Math.max(0.04, Math.abs(pt.ny - dragStartPos.ny));
-        manualMasks.radial = {
-          cx: dragStartPos.nx,
-          cy: dragStartPos.ny,
-          rx,
-          ry,
-          angle: 0,
-          feather: zoneParams.radial?.feather ?? 20
-        };
-        redrawCanvas();
-      } else if (activeZone === 'linear' && dragStartPos) {
-        manualMasks.linear = {
-          x1: dragStartPos.nx,
-          y1: dragStartPos.ny,
-          x2: pt.nx,
-          y2: pt.ny,
-          feather: zoneParams.linear?.feather ?? 25
-        };
-        redrawCanvas();
-      }
-    });
-
-    const finishDrawing = (e) => {
-      if (!isDrawing) return;
-      isDrawing = false;
-      currentStroke = null;
-      dragStartPos = null;
-      redrawCanvas();
-      if (e) updateBrushCursor(e);
-      if ($('zone-show-mask')?.checked) debounceUpdateMaskOverlay();
-    };
-    canvas.addEventListener('pointerup', finishDrawing);
-    canvas.addEventListener('pointercancel', finishDrawing);
-  }
-
-  $('zone-light').oninput = () => {
-    $('zone-light-val').textContent = Number($('zone-light').value).toFixed(2) + ' EV';
-    zoneParams[activeZone].light = Number($('zone-light').value);
-  };
-  $('zone-contrast').oninput = () => {
-    $('zone-contrast-val').textContent = Number($('zone-contrast').value).toFixed(2);
-    zoneParams[activeZone].contrast = Number($('zone-contrast').value);
-  };
-  $('zone-temp').oninput = () => {
-    $('zone-temp-val').textContent = $('zone-temp').value;
-    zoneParams[activeZone].temp = Number($('zone-temp').value);
-  };
-  $('zone-tint').oninput = () => {
-    $('zone-tint-val').textContent = $('zone-tint').value;
-    zoneParams[activeZone].tint = Number($('zone-tint').value);
-  };
-  $('zone-sat').oninput = () => {
-    $('zone-sat-val').textContent = Number($('zone-sat').value).toFixed(2) + 'x';
-    zoneParams[activeZone].saturation = Number($('zone-sat').value);
-  };
-  $('zone-detail').oninput = () => {
-    $('zone-detail-val').textContent = $('zone-detail').value + ' %';
-    zoneParams[activeZone].detail = Number($('zone-detail').value);
-  };
-  $('zone-blur').oninput = () => {
-    $('zone-blur-val').textContent = $('zone-blur').value + ' px';
-    zoneParams[activeZone].blur = Number($('zone-blur').value);
-  };
-  $('zone-feather').oninput = () => {
-    $('zone-feather-val').textContent = $('zone-feather').value + ' px';
-    zoneParams[activeZone].feather = Number($('zone-feather').value);
-    if (['brush', 'radial', 'linear'].includes(activeZone) && manualMasks[activeZone]) {
-      manualMasks[activeZone].feather = Number($('zone-feather').value);
-    }
-    if ($('zone-show-mask').checked) debounceUpdateMaskOverlay();
-  };
-  $('zone-sens').oninput = () => {
-    $('zone-sens-val').textContent = $('zone-sens').value;
-    zoneParams[activeZone].sensitivity = Number($('zone-sens').value);
-    if ($('zone-show-mask').checked) debounceUpdateMaskOverlay();
-  };
-  $('zone-invert').onchange = () => {
-    zoneParams[activeZone].invert = $('zone-invert').checked;
-    if ($('zone-show-mask').checked) updateMaskOverlay();
-  };
-  $('zone-show-mask').onchange = () => {
-    if ($('zone-show-mask').checked) {
-      if (!chosen && current) {
-        task(async () => {
-          await ensureActiveRender();
-          updateMaskOverlay();
-        });
-      } else {
-        updateMaskOverlay();
-      }
-    } else if ($('mask-overlay')) {
-      $('mask-overlay').hidden = true;
-    }
-  };
-
-  $('auto-balance-zones').onclick = () => task(async () => {
-    const activeRender = await ensureActiveRender();
-    if (!activeRender) return;
-    report('AI analyzing zone balance (subject, sky, skin, background)...');
-    const res = await api('/renders/' + activeRender.render_id + '/zones/auto-balance', {});
-    if (res.zones_params) {
-      Object.assign(zoneParams, res.zones_params);
-      loadCurrentZoneInputs();
-      report(res.message || 'AI balanced adjustments computed.');
-      if ($('zone-show-mask')?.checked) updateMaskOverlay();
-    }
-  });
-
-  $('apply-zones').onclick = () => task(async () => {
-    const activeRender = await ensureActiveRender();
-    if (!activeRender) return;
-    saveCurrentZoneInputs();
-    report('Applying local zonal corrections...');
-    const res = await api('/renders/' + activeRender.render_id + '/zones/apply', {
-      zones: zoneParams,
-      manual_masks: manualMasks
-    });
-    zonalActive = true;
-    $('zonal-badge').textContent = 'Active';
-    $('zonal-badge').style.color = '#79d479';
-    $('after').src = res.url;
-    buttons();
-    report('Zonal corrections applied.');
-  });
-
-  $('reset-zones').onclick = () => task(async () => {
-    if (!chosen) return;
-    report('Resetting zones to base develop...');
-    const res = await api('/renders/' + chosen.render_id + '/zones/reset', {});
-    zonalActive = false;
-    $('zonal-badge').textContent = 'Off';
-    $('zonal-badge').style.color = '';
-    manualMasks.brush.strokes = [];
-    redrawCanvas();
-    $('after').src = res.url;
-    if ($('mask-overlay')) $('mask-overlay').hidden = true;
-    $('zone-show-mask').checked = false;
-    buttons();
-    report('Zonal corrections reset.');
-  });
 }
 
 // --- Profile Multi-Select Management ---
@@ -2190,7 +1567,6 @@ async function init() {
   profiles = await api('/profiles');
   initProfileSelector();
   initPromptChips();
-  initZonalControls();
 
   for (const r of await api('/renders')) {
     const items = results.get(r.recipe.image_id) || [];

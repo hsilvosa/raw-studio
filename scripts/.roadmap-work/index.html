@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Raw Studio - Local RAW Development</title>
-  <link rel="stylesheet" href="/style.css?v=2.2">
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <header>
@@ -84,9 +84,6 @@
             <figcaption id="after-label">PROFILE</figcaption>
             <div class="img-viewport" id="viewport-after">
               <img id="after" alt="Profile result" draggable="false">
-              <img id="mask-overlay" alt="Mask preview" draggable="false" hidden>
-              <canvas id="mask-canvas" class="mask-canvas" hidden></canvas>
-              <div id="brush-cursor" class="brush-cursor" hidden></div>
             </div>
           </figure>
         </div>
@@ -151,100 +148,6 @@
       </div>
       <button id="clear-cache" class="btn-subtle btn-clear-cache" title="Delete all developed preview caches">Clear developed cache</button>
 
-      <hr>
-      <!-- Zonal Editing Section -->
-      <details class="zonal-panel" id="zonal-panel">
-        <summary class="zonal-summary">
-          <span>Local Masking & Zones</span>
-          <span id="zonal-badge" class="badge">Off</span>
-        </summary>
-        <div class="zonal-content">
-          <div class="zonal-category-label">AI SEMANTIC SEGMENTATION</div>
-          <div class="zonal-tabs zonal-ai-tabs">
-            <button type="button" class="zonal-tab active" data-zone="subject" id="tab-subject">Subject</button>
-            <button type="button" class="zonal-tab" data-zone="sky" id="tab-sky">Sky</button>
-            <button type="button" class="zonal-tab" data-zone="skin" id="tab-skin">Skin / Face</button>
-            <button type="button" class="zonal-tab" data-zone="background" id="tab-background">Background</button>
-            <button type="button" class="zonal-tab" data-zone="foreground" id="tab-foreground">Foreground</button>
-          </div>
-
-          <div class="zonal-category-label">MANUAL ZONE SELECTION</div>
-          <div class="zonal-tabs zonal-manual-tabs">
-            <button type="button" class="zonal-tab" data-zone="brush" id="tab-brush">🖌 Brush</button>
-            <button type="button" class="zonal-tab" data-zone="radial" id="tab-radial">⨀ Radial</button>
-            <button type="button" class="zonal-tab" data-zone="linear" id="tab-linear">▤ Linear</button>
-          </div>
-
-          <!-- Manual Tool Options (Visible when manual tool selected) -->
-          <div class="manual-tool-bar" id="manual-tool-bar" hidden>
-            <div id="brush-options" class="tool-suboptions">
-              <label for="brush-size">Size <output id="brush-size-val">35 px</output></label>
-              <input id="brush-size" type="range" min="5" max="150" value="35">
-              <div class="tool-btn-row">
-                <button type="button" id="brush-mode-paint" class="btn-mini active">Paint</button>
-                <button type="button" id="brush-mode-erase" class="btn-mini">Erase</button>
-                <button type="button" id="brush-clear-strokes" class="btn-mini btn-danger-subtle">Clear</button>
-              </div>
-            </div>
-            <div id="radial-options" class="tool-suboptions" hidden>
-              <span class="tool-hint">Click & drag on photo to place radial gradient</span>
-              <button type="button" id="radial-reset-shape" class="btn-mini">Center Ellipse</button>
-            </div>
-            <div id="linear-options" class="tool-suboptions" hidden>
-              <span class="tool-hint">Click & drag on photo to set gradient direction</span>
-              <button type="button" id="linear-reset-shape" class="btn-mini">Horizon Gradient</button>
-            </div>
-            <div class="tool-navigation-tip">💡 Arrastra sobre la foto para pintar. Para mover la imagen: mantén <strong>Espacio</strong> o arrastra con la <strong>rueda central</strong>.</div>
-          </div>
-
-          <div class="zonal-toolbar">
-            <label class="check check-compact">
-              <input type="checkbox" id="zone-show-mask"> Show Ruby Mask
-            </label>
-            <label class="check check-compact">
-              <input type="checkbox" id="zone-invert"> Invert
-            </label>
-          </div>
-
-          <div class="zone-sliders">
-            <label for="zone-light">Light (EV) <output id="zone-light-val">0.00 EV</output></label>
-            <input id="zone-light" type="range" min="-2.0" max="2.0" step="0.05" value="0.0">
-
-            <label for="zone-contrast">Contrast <output id="zone-contrast-val">0.00</output></label>
-            <input id="zone-contrast" type="range" min="-0.50" max="0.50" step="0.02" value="0.0">
-
-            <label for="zone-temp">Warmth (Temp) <output id="zone-temp-val">0</output></label>
-            <input id="zone-temp" type="range" min="-40" max="40" step="1" value="0">
-
-            <label for="zone-tint">Tint (Green / Magenta) <output id="zone-tint-val">0</output></label>
-            <input id="zone-tint" type="range" min="-30" max="30" step="1" value="0">
-
-            <label for="zone-sat">Saturation <output id="zone-sat-val">1.00x</output></label>
-            <input id="zone-sat" type="range" min="0.0" max="2.0" step="0.05" value="1.0">
-
-            <label for="zone-detail">Detail / Clarity <output id="zone-detail-val">0 %</output></label>
-            <input id="zone-detail" type="range" min="-50" max="100" step="5" value="0">
-
-            <label for="zone-blur">Defocus / Bokeh Blur <output id="zone-blur-val">0 px</output></label>
-            <input id="zone-blur" type="range" min="0" max="20" step="1" value="0">
-
-            <details class="mask-tuning">
-              <summary>Mask tuning (Feather & Sensitivity)</summary>
-              <label for="zone-feather">Feather radius <output id="zone-feather-val">12 px</output></label>
-              <input id="zone-feather" type="range" min="1" max="40" step="1" value="12">
-
-              <label for="zone-sens">Sensitivity threshold <output id="zone-sens-val">0</output></label>
-              <input id="zone-sens" type="range" min="-40" max="40" step="1" value="0">
-            </details>
-          </div>
-
-          <div class="zonal-actions">
-            <button type="button" id="auto-balance-zones" class="btn-sm btn-subtle" title="AI automatically calculates optimal adjustments per zone">✨ AI Auto-Balance</button>
-            <button type="button" id="apply-zones" class="btn-sm primary">Apply zones</button>
-            <button type="button" id="reset-zones" class="btn-sm btn-subtle" disabled>Reset</button>
-          </div>
-        </div>
-      </details>
       <hr>
       <details>
         <summary>Decisions & recipe</summary>
@@ -381,6 +284,6 @@
     </div>
   </dialog>
 
-  <script src="/app.js?v=2.2"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

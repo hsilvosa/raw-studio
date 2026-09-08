@@ -52,22 +52,6 @@ Once started, open your web browser at `http://127.0.0.1:8765`.
   - Smooth horizontal scrolling on developed profiles.
 - **High-Resolution Export**: Export finished developments up to 6000px PNG in `PROCCESED/PERFILES/<profile>/studio_<image>/` with full recipe metadata.
 
-### 3. Interactive Local Masking & Zone Selection
-- **AI Semantic Segmentation**: Automated detection for **Subject**, **Sky**, **Skin / Face**, **Background**, and **Foreground**.
-- **AI Auto-Balance**: Analyzes zone telemetry to automatically direct regional light, contrast, and color balance (e.g. recovering sky clouds, gently lifting shadowed subjects, and smoothing portraits while keeping backgrounds balanced).
-- **Manual Zone Selection**:
-  - **Brush**: Interactive brush tool directly on the viewer canvas with customizable size, softness/feather, and paint/erase modes.
-  - **Radial Gradient**: Elliptical/circular radial gradients with interactive placement and falloff.
-  - **Linear Gradient**: Directional linear gradients for horizon line and sky transitions.
-- **Precision Photographic Adjustments per Zone**:
-  - Light (EV exposure offset -2.0 to +2.0 EV)
-  - Contrast (S-curve around 0.18 mid-grey)
-  - Color (Temperature warmth/cool -40 to +40, green/magenta tint, saturation scaling)
-  - Detail (Multi-scale unsharp micro-contrast -50% to +100%)
-  - Defocus / Bokeh Blur (Gaussian depth blur 0 to 20 px)
-- **Live Ruby Mask Overlay**: Real-time translucent red preview directly over the viewer to inspect mask boundaries.
-- **Non-Destructive & Export Integration**: Preserves RAW integrity; zone parameters are stored in `recipe.json` and rendered at full 6000px on final export.
-
 ## Local Vision Model & Supervision
 
 The system integrates `Qwen3-VL-4B-Instruct Q4_K_M` running locally on GPU via `llama.cpp`. Download and start the model daemon using the provided helper scripts:
