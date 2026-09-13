@@ -2205,23 +2205,3 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(2px); 
   opacity: 0.45;
   cursor: not-allowed;
 }
-.btn-kirkify-quick {
-  background: #252219;
-  border: 1px solid #755e30;
-  color: #e5c07b;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 9px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.btn-kirkify-quick:hover:not(:disabled) {
-  background: #38301d;
-  border-color: #e5c07b;
-  color: #fff;
-}
-.btn-kirkify-quick:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}

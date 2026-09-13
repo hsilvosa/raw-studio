@@ -644,7 +644,7 @@ class KirkifyRequest(BaseModel):
     image_id: str | None = None
     mode: str = 'fusion'
     intensity: float = Field(default=0.75, ge=0.1, le=1.0)
-    scale: float = Field(default=1.05, ge=0.5, le=2.0)
+    scale: float = Field(default=1.0, ge=0.4, le=1.6)
     match_lighting: bool = True
 
 
@@ -784,7 +784,7 @@ def export_render(job_id, recipe):
                     im,
                     mode=recipe.get('kirkify_mode', 'organic'),
                     intensity=recipe.get('kirkify_intensity', 0.70),
-                    scale_multiplier=recipe.get('kirkify_scale', 1.05)
+                    scale_multiplier=recipe.get('kirkify_scale', 1.0)
                 )
                 kirk_im.save(output, 'PNG')
         except Exception:
@@ -844,7 +844,7 @@ def export_batch_renders(job_id, recipes):
                             im,
                             mode=recipe.get('kirkify_mode', 'organic'),
                             intensity=recipe.get('kirkify_intensity', 0.70),
-                            scale_multiplier=recipe.get('kirkify_scale', 1.05)
+                            scale_multiplier=recipe.get('kirkify_scale', 1.0)
                         )
                         kirk_im.save(output, 'PNG')
                 except Exception:

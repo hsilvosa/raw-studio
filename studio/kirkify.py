@@ -230,6 +230,7 @@ def apply_kirk_fusion(
     arr_bgr: np.ndarray,
     faces: list[dict],
     intensity: float = 0.80,
+    scale_multiplier: float = 1.0,
     match_lighting: bool = True
 ) -> np.ndarray:
     """Perform true landmark-aligned face fusion between Charlie Kirk and target faces."""
@@ -269,11 +270,26 @@ def apply_kirk_fusion(
         # Anatomically proportional nose and mouth coordinates
         nose = mid_eye + perp_vec * (eye_dist * 0.50)
         mouth = mid_eye + perp_vec * (eye_dist * 0.93)
+        base_dst_pts = np.float32([e1, e2, nose, mouth])
 
-        dst_pts = np.float32([e1, e2, nose, mouth])
+        # Center of facial triangle
+        face_center = mid_eye + perp_vec * (eye_dist * 0.45)
+
+        # Proportional scale adjustment:
+        # 1. Base scale: 0.86 ensures Kirk's facial features sit naturally within
+        #    the subject's skull rather than inflating across the entire head.
+        # 2. Auto-proportional bound: prevents oversized face on narrow or wide-eyed heads.
+        # 3. User scale multiplier: allows interactive slider adjustment.
+        user_scale = float(np.clip(scale_multiplier, 0.40, 1.60))
+        max_skull_ratio = (fw * 0.38) / max(1.0, eye_dist)
+        auto_skull_bound = min(1.0, max_skull_ratio)
+        effective_scale = auto_skull_bound * 0.86 * user_scale
+
+        # Scale target facial landmarks around face_center
+        scaled_dst_pts = face_center + (base_dst_pts - face_center) * effective_scale
 
         # Compute partial affine transform
-        affine_mat, _ = cv2.estimateAffinePartial2D(src_pts, dst_pts)
+        affine_mat, _ = cv2.estimateAffinePartial2D(src_pts, scaled_dst_pts)
         if affine_mat is None:
             continue
 
@@ -285,11 +301,11 @@ def apply_kirk_fusion(
             kirk_alpha, affine_mat, (tw, th), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0
         )
 
-        # Facial feature center and calibrated inner radii (avoids overflowing cheeks/ears on tilted heads)
-        face_cx = int(mid_eye[0] + perp_vec[0] * (eye_dist * 0.45))
-        face_cy = int(mid_eye[1] + perp_vec[1] * (eye_dist * 0.45))
-        rx = max(12, int(eye_dist * 0.82))
-        ry = max(12, int(eye_dist * 1.15))
+        # Facial feature center and calibrated inner radii
+        face_cx = int(face_center[0])
+        face_cy = int(face_center[1])
+        rx = max(10, int(eye_dist * 0.80 * effective_scale))
+        ry = max(10, int(eye_dist * 1.12 * effective_scale))
 
         tilt_deg = float(np.degrees(np.arctan2(eye_vec[1], eye_vec[0])))
 
@@ -376,8 +392,8 @@ def apply_kirk_fusion(
 def apply_kirkify(
     im: Image.Image,
     mode: str = 'fusion',
-    intensity: float = 0.80,
-    scale_multiplier: float = 1.05,
+    intensity: float = 0.75,
+    scale_multiplier: float = 1.0,
     match_lighting: bool = True
 ) -> tuple[Image.Image, int]:
     """Apply true Charlie Kirk face fusion to detected human faces.
@@ -386,7 +402,7 @@ def apply_kirkify(
         im: PIL RGB image to transform.
         mode: 'fusion' (true landmark-aligned face fusion).
         intensity: Fusion blend strength (0.20 to 1.0).
-        scale_multiplier: Unused scale parameter preserved for API compatibility.
+        scale_multiplier: Scale multiplier for facial feature sizing (0.5 to 1.3).
         match_lighting: Whether to adapt LAB lighting statistics.
 
     Returns:
@@ -403,6 +419,7 @@ def apply_kirkify(
         arr_bgr,
         faces,
         intensity=intensity,
+        scale_multiplier=scale_multiplier,
         match_lighting=match_lighting
     )
 

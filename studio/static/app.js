@@ -83,15 +83,10 @@ function buttons() {
     autoBalanceBtn.title = !current ? 'Select a photo first' : 'AI automatically calculates optimal adjustments per zone';
   }
   const kirkifyBtn = $('kirkify-btn');
-  const kirkifyQuickBtn = $('kirkify-quick-btn');
   const hasPhoto = Boolean(chosen || current);
   if (kirkifyBtn) {
     kirkifyBtn.disabled = busy || !hasPhoto;
     kirkifyBtn.title = !hasPhoto ? 'Select or develop a photo first' : 'Detect faces and overlay Charlie Kirk';
-  }
-  if (kirkifyQuickBtn) {
-    kirkifyQuickBtn.disabled = busy || !hasPhoto;
-    kirkifyQuickBtn.title = !hasPhoto ? 'Select or develop a photo first' : 'Detect faces and overlay Charlie Kirk';
   }
 }
 
@@ -983,6 +978,14 @@ function showResult(result) {
     if (intInput) {
       intInput.value = Math.round(result.recipe.kirkify_intensity * 100);
       if (intVal) intVal.textContent = intInput.value + '%';
+    }
+  }
+  if (result.recipe?.kirkify_scale) {
+    const scaleInput = $('kirkify-scale');
+    const scaleVal = $('kirkify-scale-val');
+    if (scaleInput) {
+      scaleInput.value = Math.round(result.recipe.kirkify_scale * 100);
+      if (scaleVal) scaleVal.textContent = scaleInput.value + '%';
     }
   }
 
@@ -2219,10 +2222,11 @@ function initPromptChips() {
 
 function initKirkifyControls() {
   const kirkifyBtn = $('kirkify-btn');
-  const kirkifyQuickBtn = $('kirkify-quick-btn');
   const kirkifyResetBtn = $('kirkify-reset-btn');
   const intensityInput = $('kirkify-intensity');
   const intensityVal = $('kirkify-intensity-val');
+  const scaleInput = $('kirkify-scale');
+  const scaleVal = $('kirkify-scale-val');
 
   if (intensityInput && intensityVal) {
     intensityInput.oninput = () => {
@@ -2230,37 +2234,52 @@ function initKirkifyControls() {
     };
   }
 
+  if (scaleInput && scaleVal) {
+    scaleInput.oninput = () => {
+      scaleVal.textContent = scaleInput.value + '%';
+    };
+  }
+
   const onKirkify = async () => {
     if (busy || (!chosen && !current)) return;
     await task(async () => {
+      // Ensure active render so Base Develop (#before) is NEVER altered!
+      const activeRender = await ensureActiveRender();
+      if (!activeRender) {
+        report('Por favor, selecciona o revela primero una foto.');
+        return;
+      }
+
       const intensity = parseFloat($('kirkify-intensity')?.value || '75') / 100.0;
+      const scale = parseFloat($('kirkify-scale')?.value || '100') / 100.0;
       report('🎭 Detectando rostros y aplicando Fusión Facial...');
       try {
-        const payload = chosen ? { render_id: chosen.render_id } : { image_id: current.id };
-        payload.mode = 'fusion';
-        payload.intensity = intensity;
+        const payload = {
+          render_id: activeRender.render_id,
+          mode: 'fusion',
+          intensity: intensity,
+          scale: scale
+        };
 
         const res = await api('/kirkify', payload);
-        if (chosen) {
-          chosen.url = res.url;
-          if (chosen.recipe) {
-            chosen.recipe.is_kirkified = true;
-            chosen.recipe.kirkify_mode = 'fusion';
-            chosen.recipe.kirkify_intensity = intensity;
-            chosen.recipe.kirkify_faces = res.faces_found;
-          }
-          $('after').src = res.url;
-          if (chosen.render_id) {
-            for (const b of $('results').children) {
-              if (b.dataset.renderId === chosen.render_id) {
-                const img = b.querySelector('img');
-                if (img) img.src = res.url;
-              }
+        activeRender.url = res.url;
+        if (activeRender.recipe) {
+          activeRender.recipe.is_kirkified = true;
+          activeRender.recipe.kirkify_mode = 'fusion';
+          activeRender.recipe.kirkify_intensity = intensity;
+          activeRender.recipe.kirkify_scale = scale;
+          activeRender.recipe.kirkify_faces = res.faces_found;
+        }
+        // ONLY update #after (the developed profile render).
+        // #before (Base Develop) remains 100% untouched as the reference!
+        $('after').src = res.url;
+        if (activeRender.render_id) {
+          for (const b of $('results').children) {
+            if (b.dataset.renderId === activeRender.render_id) {
+              const img = b.querySelector('img');
+              if (img) img.src = res.url;
             }
           }
-        } else if (current) {
-          $('before').src = res.url;
-          $('after').src = res.url;
         }
         if ($('kirkify-badge')) {
           $('kirkify-badge').hidden = false;
@@ -2301,7 +2320,6 @@ function initKirkifyControls() {
   };
 
   if (kirkifyBtn) kirkifyBtn.onclick = onKirkify;
-  if (kirkifyQuickBtn) kirkifyQuickBtn.onclick = onKirkify;
   if (kirkifyResetBtn) kirkifyResetBtn.onclick = onResetKirkify;
 }
 

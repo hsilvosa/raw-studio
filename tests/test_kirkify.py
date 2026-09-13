@@ -59,3 +59,16 @@ def test_kirkify_glasses_and_tilt():
         assert count >= 1
         assert res.size == im.size
 
+
+def test_kirkify_scale_adjustment():
+    preview = Path('.studio/previews/4ae69cfda67b64b2f55c.png')
+    if preview.is_file():
+        im = Image.open(preview).convert('RGB')
+        res_small, _ = apply_kirkify(im, mode='fusion', intensity=0.75, scale_multiplier=0.70)
+        res_large, _ = apply_kirkify(im, mode='fusion', intensity=0.75, scale_multiplier=1.20)
+        # Verify both scales produce valid images and differ from each other
+        assert res_small.size == im.size
+        assert res_large.size == im.size
+        assert not np.array_equal(np.asarray(res_small), np.asarray(res_large))
+
+
