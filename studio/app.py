@@ -18,7 +18,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from . import library, model, adaptation, zones
+from . import library, model, adaptation, zones, kirkify
 from .darktable import Darktable
 from .recipes import make_stack, merge, profiles, validate_proposal
 from .settings import (
@@ -625,6 +625,9 @@ def rendered_image(identifier: str, raw: bool = False):
     folder = STATE / 'renders' / identifier
     recipe = json.loads(recipe_path(identifier).read_text(encoding='utf-8'))
     if not raw:
+        kirkified = folder / 'kirkified.png'
+        if kirkified.is_file() and recipe.get('is_kirkified'):
+            return FileResponse(kirkified)
         zonal = folder / 'zonal.png'
         if zonal.is_file():
             return FileResponse(zonal)
@@ -634,6 +637,118 @@ def rendered_image(identifier: str, raw: bool = False):
         if candidate.is_file():
             preview = candidate
     return FileResponse(preview)
+
+
+class KirkifyRequest(BaseModel):
+    render_id: str | None = None
+    image_id: str | None = None
+    mode: str = 'fusion'
+    intensity: float = Field(default=0.75, ge=0.1, le=1.0)
+    scale: float = Field(default=1.05, ge=0.5, le=2.0)
+    match_lighting: bool = True
+
+
+@app.post('/api/kirkify')
+def apply_kirkify_route(req: KirkifyRequest):
+    if not req.render_id and not req.image_id:
+        raise HTTPException(400, 'Either render_id or image_id is required')
+
+    if req.render_id:
+        folder = STATE / 'renders' / req.render_id
+        if not folder.is_dir():
+            raise HTTPException(404, 'Render not found')
+        recipe_file = recipe_path(req.render_id)
+        recipe = json.loads(recipe_file.read_text(encoding='utf-8'))
+
+        zonal_path = folder / 'zonal.png'
+        if zonal_path.is_file():
+            input_path = zonal_path
+        elif (folder / 'adapted.png').is_file():
+            input_path = folder / 'adapted.png'
+        else:
+            input_path = folder / 'preview.png'
+
+        if not input_path.is_file():
+            raise HTTPException(404, 'Image preview not found')
+
+        with Image.open(input_path) as im:
+            kirkified_im, faces_count = kirkify.apply_kirkify(
+                im,
+                mode=req.mode,
+                intensity=req.intensity,
+                scale_multiplier=req.scale,
+                match_lighting=req.match_lighting
+            )
+            dest_path = folder / 'kirkified.png'
+            kirkified_im.save(dest_path, 'PNG')
+
+        recipe['is_kirkified'] = True
+        recipe['kirkify_mode'] = req.mode
+        recipe['kirkify_intensity'] = req.intensity
+        recipe['kirkify_scale'] = req.scale
+        recipe['kirkify_faces'] = faces_count
+        library.save_json(recipe_file, recipe)
+
+        return {
+            'status': 'ok',
+            'faces_found': faces_count,
+            'render_id': req.render_id,
+            'is_kirkified': True,
+            'mode': req.mode,
+            'url': f'/api/renders/{req.render_id}/image?t={int(time.time() * 1000)}',
+            'message': f'Kirkificación ({req.mode}) aplicada a {faces_count} rostro(s).' if faces_count > 0 else 'No se detectaron rostros en la foto.',
+        }
+    else:
+        preview_path = STATE / 'previews' / (req.image_id + '.png')
+        if not preview_path.is_file():
+            raise HTTPException(404, 'Library preview not found')
+
+        dest_path = STATE / 'previews' / (req.image_id + '_kirkified.png')
+        with Image.open(preview_path) as im:
+            kirkified_im, faces_count = kirkify.apply_kirkify(
+                im,
+                mode=req.mode,
+                intensity=req.intensity,
+                scale_multiplier=req.scale,
+                match_lighting=req.match_lighting
+            )
+            kirkified_im.save(dest_path, 'PNG')
+
+        return {
+            'status': 'ok',
+            'faces_found': faces_count,
+            'image_id': req.image_id,
+            'is_kirkified': True,
+            'mode': req.mode,
+            'url': f'/api/images/{req.image_id}/kirkified?t={int(time.time() * 1000)}',
+            'message': f'Kirkificación ({req.mode}) aplicada a {faces_count} rostro(s).' if faces_count > 0 else 'No se detectaron rostros en la foto.',
+        }
+
+
+@app.post('/api/renders/{identifier}/kirkify/reset')
+def reset_kirkify_route(identifier: str):
+    folder = STATE / 'renders' / identifier
+    if not folder.is_dir():
+        raise HTTPException(404, 'Render not found')
+    recipe_file = recipe_path(identifier)
+    recipe = json.loads(recipe_file.read_text(encoding='utf-8'))
+    recipe['is_kirkified'] = False
+    library.save_json(recipe_file, recipe)
+    return {
+        'status': 'ok',
+        'render_id': identifier,
+        'is_kirkified': False,
+        'url': f'/api/renders/{identifier}/image?t={int(time.time() * 1000)}',
+        'message': 'Kirkificación desactivada.',
+    }
+
+
+@app.get('/api/images/{identifier}/kirkified')
+def image_kirkified(identifier: str):
+    path = STATE / 'previews' / (identifier + '_kirkified.png')
+    if not path.is_file():
+        raise HTTPException(404, 'Kirkified preview not found')
+    return FileResponse(path, media_type='image/png')
 
 
 @app.post('/api/renders/{identifier}/export')
@@ -660,6 +775,18 @@ def export_render(job_id, recipe):
                 manuals = zones.build_manual_masks((im.height, im.width), recipe.get('manual_masks', {}))
                 adjusted_im = zones.apply_zone_adjustments(im, masks, recipe['zones_params'], manuals)
                 adjusted_im.save(output, 'PNG')
+        except Exception:
+            pass
+    if recipe.get('is_kirkified'):
+        try:
+            with Image.open(output) as im:
+                kirk_im, _ = kirkify.apply_kirkify(
+                    im,
+                    mode=recipe.get('kirkify_mode', 'organic'),
+                    intensity=recipe.get('kirkify_intensity', 0.70),
+                    scale_multiplier=recipe.get('kirkify_scale', 1.05)
+                )
+                kirk_im.save(output, 'PNG')
         except Exception:
             pass
     library.save_json(output.with_suffix('.json'), recipe)
@@ -708,6 +835,18 @@ def export_batch_renders(job_id, recipes):
                         manuals = zones.build_manual_masks((im.height, im.width), recipe.get('manual_masks', {}))
                         adjusted_im = zones.apply_zone_adjustments(im, masks, recipe['zones_params'], manuals)
                         adjusted_im.save(output, 'PNG')
+                except Exception:
+                    pass
+            if recipe.get('is_kirkified'):
+                try:
+                    with Image.open(output) as im:
+                        kirk_im, _ = kirkify.apply_kirkify(
+                            im,
+                            mode=recipe.get('kirkify_mode', 'organic'),
+                            intensity=recipe.get('kirkify_intensity', 0.70),
+                            scale_multiplier=recipe.get('kirkify_scale', 1.05)
+                        )
+                        kirk_im.save(output, 'PNG')
                 except Exception:
                     pass
             library.save_json(output.with_suffix('.json'), recipe)

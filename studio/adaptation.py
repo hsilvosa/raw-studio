@@ -141,22 +141,36 @@ def adapt_stack(base_stack, telemetry, user_exposure=0.0, user_intensity=0.8):
     decisions = []
 
     # 1. Bounded Exposure Compensation
-    target_median = 0.22
     if telemetry['median'] < 0.08:
         # Dark / night scene: preserve mood, do NOT brighten into daylight
-        raw_exposure = math.log2(max(0.06, telemetry['median'] * 1.5) / max(0.02, telemetry['median']))
-        raw_exposure = min(0.65, max(0.0, raw_exposure))
+        target_median = max(0.20, min(0.28, telemetry['median'] * 2.6))
+        raw_exposure = math.log2(target_median / max(0.02, telemetry['median']))
+        raw_exposure = max(0.0, min(1.25, raw_exposure))
         decisions.append(f"Ambiente nocturno/oscuro preservado (+{raw_exposure:.2f} EV adaptativo)")
+    elif telemetry['median'] < 0.22:
+        # Smooth blend from low-key to photographic middle grey
+        t_blend = (telemetry['median'] - 0.08) / (0.22 - 0.08)
+        target_median = 0.26 + t_blend * (0.44 - 0.26)
+        raw_exposure = math.log2(target_median / telemetry['median'])
+        raw_exposure = max(0.0, min(1.50, raw_exposure))
+        decisions.append(f"Exposición adaptativa calibrada (+{raw_exposure:.2f} EV)")
     else:
-        raw_exposure = math.log2(target_median / max(0.04, telemetry['median']))
-        raw_exposure = max(-0.6, min(1.10, raw_exposure))
-        decisions.append(f"Exposición calibrada al punto medio (+{raw_exposure:.2f} EV adaptativo)")
+        # Daylight & standard scenes calibrated to Zone V middle grey (~0.44 in sRGB)
+        target_median = 0.44
+        raw_exposure = math.log2(target_median / telemetry['median'])
+        raw_exposure = max(-0.60, min(1.40, raw_exposure))
+        decisions.append(f"Exposición calibrada al punto medio ({raw_exposure:+.2f} EV adaptativo)")
 
     # Highlight protection clamp
-    highlight_risk = telemetry['white_fraction'] > 0.012 or telemetry['specular_fraction'] > 0.004 or telemetry['p99'] > 0.98
-    if highlight_risk:
+    severe_highlight_risk = telemetry['white_fraction'] > 0.02 or (telemetry['white_fraction'] > 0.01 and telemetry['specular_fraction'] > 0.005)
+    moderate_highlight_risk = not severe_highlight_risk and (telemetry['white_fraction'] > 0.008 or (telemetry['p99'] > 0.985 and telemetry['specular_fraction'] > 0.003))
+
+    if severe_highlight_risk:
         raw_exposure = min(raw_exposure, 0.15)
         decisions.append("Protección de altas luces activada (límite de exposición aplicado para evitar quemados)")
+    elif moderate_highlight_risk:
+        raw_exposure = min(raw_exposure, 0.60)
+        decisions.append("Protección suave de altas luces activada")
 
     final_exposure = max(-2.0, min(4.0, raw_exposure + user_exposure))
 
@@ -205,16 +219,22 @@ def adapt_stack(base_stack, telemetry, user_exposure=0.0, user_intensity=0.8):
         stack.append(sig_mod)
     sig_params = sig_mod.setdefault('params', {})
 
-    if highlight_risk:
+    if severe_highlight_risk or moderate_highlight_risk:
         # Softer contrast to compress specular whites and recover sky/reflection detail
         sig_params['middle_grey_contrast'] = 1.30
         sig_params['display_black_target'] = 0.025
         cb_params['highlights_Y'] = -0.06
         decisions.append("Curva sigmoide ajustada con compresión suave de altas luces")
     elif telemetry['dynamic_range_ev'] < 3.2:
-        # Low contrast scene: gently enhance separation
-        sig_params['middle_grey_contrast'] = 1.55
-        sig_params['display_black_target'] = 0.015
+        # Low contrast scene: gently enhance separation without crushing shadows
+        sig_params['middle_grey_contrast'] = 1.40
+        sig_params['display_black_target'] = 0.020
+
+    # Shadow recovery: open deep shadows to prevent muddy/crushed blacks
+    if telemetry['black_fraction'] > 0.05:
+        cb_params['shadows_Y'] = max(cb_params.get('shadows_Y', 0.0), 0.045)
+        sig_params['display_black_target'] = max(sig_params.get('display_black_target', 0.02), 0.035)
+        decisions.append("Recuperación de detalle en sombras profundas")
 
     # 5. Noise-Adaptive Sharpening & Denoising
     if telemetry['is_noisy']:

@@ -2100,3 +2100,128 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(2px); 
 .tool-navigation-tip strong {
   color: var(--accent);
 }
+
+/* Charlie Kirk Kirkify Filter Card & Buttons */
+.kirkify-card {
+  background: #191b1d;
+  border: 1px solid #32373b;
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kirkify-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.kirkify-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e5c07b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.kirkify-desc {
+  font-size: 11px;
+  color: #8f969b;
+  margin: 0;
+  line-height: 1.35;
+}
+.kirkify-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #141618;
+  border-radius: 4px;
+  padding: 8px 10px;
+  border: 1px solid #282c2f;
+}
+.kirkify-mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.kirkify-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #c9d1d9;
+  cursor: pointer;
+  user-select: none;
+}
+.kirkify-radio-label input[type="radio"] {
+  accent-color: #e5c07b;
+  cursor: pointer;
+}
+.kirkify-slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 2px;
+}
+.kirkify-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #8b949e;
+}
+.kirkify-val {
+  color: #e5c07b;
+  font-weight: 600;
+}
+.kirkify-range {
+  width: 100%;
+  accent-color: #e5c07b;
+  cursor: pointer;
+}
+.kirkify-btn-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.btn-kirkify {
+  background: linear-gradient(135deg, #3a2e1d 0%, #2a2215 100%);
+  border: 1px solid #e5c07b;
+  color: #f7e0b5;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex: 1;
+}
+.btn-kirkify:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4d3d25 0%, #3a2f1c 100%);
+  color: #fff;
+  box-shadow: 0 0 8px rgba(229, 192, 123, 0.35);
+}
+.btn-kirkify:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.btn-kirkify-quick {
+  background: #252219;
+  border: 1px solid #755e30;
+  color: #e5c07b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-kirkify-quick:hover:not(:disabled) {
+  background: #38301d;
+  border-color: #e5c07b;
+  color: #fff;
+}
+.btn-kirkify-quick:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

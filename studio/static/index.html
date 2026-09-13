@@ -64,6 +64,7 @@
             <button id="zoom-in" title="Zoom in (+)">+</button>
             <button id="zoom-100" title="100% actual size (1:1)">100%</button>
             <button id="full-page" title="Toggle full page view (F / Esc)">Full Page</button>
+            <button type="button" id="kirkify-quick-btn" class="btn-kirkify-quick" title="Kirkificar rostros con la cara de Charlie Kirk" disabled>🎭 Kirkify</button>
           </div>
 
         </div>
@@ -150,6 +151,31 @@
         </div>
       </div>
       <button id="clear-cache" class="btn-subtle btn-clear-cache" title="Delete all developed preview caches">Clear developed cache</button>
+
+      <div class="kirkify-card" id="kirkify-card">
+        <div class="kirkify-header">
+          <span class="kirkify-title">🎭 Fusión Facial (Charlie Kirk)</span>
+          <span class="badge" id="kirkify-badge" hidden>Fusionado</span>
+        </div>
+        <p class="kirkify-desc">Fusiona la cara de Charlie Kirk adaptando la perspectiva 3D, inclinación de ojos, tono de piel y luz del sujeto.</p>
+        
+        <div class="kirkify-options">
+          <div class="kirkify-slider-row">
+            <label for="kirkify-intensity" class="kirkify-label">
+              <span>Nivel de Fusión</span>
+              <span id="kirkify-intensity-val" class="kirkify-val">75%</span>
+            </label>
+            <input type="range" id="kirkify-intensity" min="20" max="100" value="75" step="5" class="kirkify-range">
+          </div>
+        </div>
+
+        <div class="kirkify-btn-row">
+          <button type="button" id="kirkify-btn" class="btn-action btn-kirkify" disabled title="Detectar rostros y fusionar con Charlie Kirk">
+            🎭 Fusionar Rostros
+          </button>
+          <button type="button" id="kirkify-reset-btn" class="btn-subtle btn-mini" style="display:none;" title="Revertir rostro original">Revertir</button>
+        </div>
+      </div>
 
       <hr>
       <!-- Zonal Editing Section -->

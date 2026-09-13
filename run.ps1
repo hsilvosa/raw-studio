@@ -6,4 +6,4 @@ if (-not $env:PHOTO_ROOT -and (Test-Path -LiteralPath (Join-Path $PSScriptRoot '
 }
 $python = Join-Path $env:USERPROFILE 'miniconda3/envs/wuxia/python.exe'
 if (-not (Test-Path -LiteralPath $python)) { $python = 'python' }
-& $python -m uvicorn studio.app:app --host 127.0.0.1 --port $Port
+& $python -m uvicorn studio.app:app --host 127.0.0.1 --port $Port --reload

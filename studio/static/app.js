@@ -82,6 +82,17 @@ function buttons() {
     autoBalanceBtn.disabled = busy || !current;
     autoBalanceBtn.title = !current ? 'Select a photo first' : 'AI automatically calculates optimal adjustments per zone';
   }
+  const kirkifyBtn = $('kirkify-btn');
+  const kirkifyQuickBtn = $('kirkify-quick-btn');
+  const hasPhoto = Boolean(chosen || current);
+  if (kirkifyBtn) {
+    kirkifyBtn.disabled = busy || !hasPhoto;
+    kirkifyBtn.title = !hasPhoto ? 'Select or develop a photo first' : 'Detect faces and overlay Charlie Kirk';
+  }
+  if (kirkifyQuickBtn) {
+    kirkifyQuickBtn.disabled = busy || !hasPhoto;
+    kirkifyQuickBtn.title = !hasPhoto ? 'Select or develop a photo first' : 'Detect faces and overlay Charlie Kirk';
+  }
 }
 
 async function waitJob(id, prefix = '') {
@@ -906,6 +917,8 @@ function select(im) {
     }
     if ($('mask-overlay')) $('mask-overlay').hidden = true;
     redrawCanvas();
+    if ($('kirkify-badge')) $('kirkify-badge').hidden = true;
+    if ($('kirkify-reset-btn')) $('kirkify-reset-btn').style.display = 'none';
   }
 
   drawResults();
@@ -953,6 +966,24 @@ function showResult(result) {
     updateMaskOverlay();
   } else if ($('mask-overlay')) {
     $('mask-overlay').hidden = true;
+  }
+
+  // Kirkify state sync
+  const isKirkified = Boolean(result.recipe?.is_kirkified);
+  if ($('kirkify-badge')) {
+    $('kirkify-badge').hidden = !isKirkified;
+    $('kirkify-badge').textContent = 'Fusionado';
+  }
+  if ($('kirkify-reset-btn')) {
+    $('kirkify-reset-btn').style.display = isKirkified ? 'inline-block' : 'none';
+  }
+  if (result.recipe?.kirkify_intensity) {
+    const intInput = $('kirkify-intensity');
+    const intVal = $('kirkify-intensity-val');
+    if (intInput) {
+      intInput.value = Math.round(result.recipe.kirkify_intensity * 100);
+      if (intVal) intVal.textContent = intInput.value + '%';
+    }
   }
 
   buttons();
@@ -2186,11 +2217,100 @@ function initPromptChips() {
   });
 }
 
+function initKirkifyControls() {
+  const kirkifyBtn = $('kirkify-btn');
+  const kirkifyQuickBtn = $('kirkify-quick-btn');
+  const kirkifyResetBtn = $('kirkify-reset-btn');
+  const intensityInput = $('kirkify-intensity');
+  const intensityVal = $('kirkify-intensity-val');
+
+  if (intensityInput && intensityVal) {
+    intensityInput.oninput = () => {
+      intensityVal.textContent = intensityInput.value + '%';
+    };
+  }
+
+  const onKirkify = async () => {
+    if (busy || (!chosen && !current)) return;
+    await task(async () => {
+      const intensity = parseFloat($('kirkify-intensity')?.value || '75') / 100.0;
+      report('🎭 Detectando rostros y aplicando Fusión Facial...');
+      try {
+        const payload = chosen ? { render_id: chosen.render_id } : { image_id: current.id };
+        payload.mode = 'fusion';
+        payload.intensity = intensity;
+
+        const res = await api('/kirkify', payload);
+        if (chosen) {
+          chosen.url = res.url;
+          if (chosen.recipe) {
+            chosen.recipe.is_kirkified = true;
+            chosen.recipe.kirkify_mode = 'fusion';
+            chosen.recipe.kirkify_intensity = intensity;
+            chosen.recipe.kirkify_faces = res.faces_found;
+          }
+          $('after').src = res.url;
+          if (chosen.render_id) {
+            for (const b of $('results').children) {
+              if (b.dataset.renderId === chosen.render_id) {
+                const img = b.querySelector('img');
+                if (img) img.src = res.url;
+              }
+            }
+          }
+        } else if (current) {
+          $('before').src = res.url;
+          $('after').src = res.url;
+        }
+        if ($('kirkify-badge')) {
+          $('kirkify-badge').hidden = false;
+          $('kirkify-badge').textContent = 'Fusionado';
+        }
+        if ($('kirkify-reset-btn')) $('kirkify-reset-btn').style.display = 'inline-block';
+        report(res.message);
+      } catch (err) {
+        report('Error al fusionar rostros: ' + err.message);
+      }
+    });
+  };
+
+  const onResetKirkify = async () => {
+    if (busy || !chosen) return;
+    await task(async () => {
+      report('Revirtiendo Kirkificación...');
+      try {
+        const res = await api('/renders/' + chosen.render_id + '/kirkify/reset', {});
+        chosen.url = res.url;
+        if (chosen.recipe) {
+          chosen.recipe.is_kirkified = false;
+        }
+        $('after').src = res.url;
+        for (const b of $('results').children) {
+          if (b.dataset.renderId === chosen.render_id) {
+            const img = b.querySelector('img');
+            if (img) img.src = res.url;
+          }
+        }
+        if ($('kirkify-badge')) $('kirkify-badge').hidden = true;
+        if ($('kirkify-reset-btn')) $('kirkify-reset-btn').style.display = 'none';
+        report(res.message);
+      } catch (err) {
+        report('Error al revertir: ' + err.message);
+      }
+    });
+  };
+
+  if (kirkifyBtn) kirkifyBtn.onclick = onKirkify;
+  if (kirkifyQuickBtn) kirkifyQuickBtn.onclick = onKirkify;
+  if (kirkifyResetBtn) kirkifyResetBtn.onclick = onResetKirkify;
+}
+
 async function init() {
   profiles = await api('/profiles');
   initProfileSelector();
   initPromptChips();
   initZonalControls();
+  initKirkifyControls();
 
   for (const r of await api('/renders')) {
     const items = results.get(r.recipe.image_id) || [];

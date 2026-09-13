@@ -5,10 +5,12 @@ A local application for comparing color profiles, organizing libraries, and deve
 ## Installation & Setup
 
 ### Prerequisites
+
 - Python 3.10+
 - [darktable](https://www.darktable.org/) with experimental `darktable-mcp` binary support (can be configured via `DARKTABLE_MCP` environment variable if not in PATH).
 
 ### 1. Install Dependencies
+
 Create and activate your preferred Python environment (venv, conda, etc.), then install requirements:
 
 ```bash
@@ -16,6 +18,7 @@ pip install -r requirements.txt
 ```
 
 ### 2. Launch the Application
+
 - **Using the PowerShell launcher (Windows):**
   ```powershell
   ./run.ps1
@@ -33,6 +36,7 @@ Once started, open your web browser at `http://127.0.0.1:8765`.
 ## Core Features
 
 ### 1. Photo Library & Organization
+
 - **Visual File Browser**: Import RAW photos (`.ARW`, `.CR2`, `.NEF`, `.DNG`, etc.) directly from any connected drive or folder with fast embedded thumbnail extraction.
 - **Folders & Organization**: Detects original source directories automatically (e.g. `OSAKA`, `KIOTO`, `FUJI`) and allows custom folder assignment.
 - **Tagging**: Add and manage `#tags` per image or in batch. Click any tag chip to instantly filter the library.
@@ -42,6 +46,7 @@ Once started, open your web browser at `http://127.0.0.1:8765`.
 - **Expanded Grid View**: Click **⛶ Expand** to view a responsive multi-column gallery of thumbnails.
 
 ### 2. Developing & Profile Comparison
+
 - **Color Profiles & Multi-Select**: Compare classic film simulations and creative looks (Portra, Tri-X, Astia, Classic Chrome, CineStill, Kodachrome, Neutral, and more). Select one or multiple profiles simultaneously for batch processing.
 - **Prompt-Based AI Developing**: Select `00_PROMPT_IA` or pick style chips (e.g. *Cinematic warm night*, *Moody rainy day*, *Golden hour editorial*) to describe the aesthetic in natural language.
 - **Side-by-Side Comparison**: Synchronized split viewer comparing the base develop against any developed look.
@@ -53,6 +58,7 @@ Once started, open your web browser at `http://127.0.0.1:8765`.
 - **High-Resolution Export**: Export finished developments up to 6000px PNG in `PROCCESED/PERFILES/<profile>/studio_<image>/` with full recipe metadata.
 
 ### 3. Interactive Local Masking & Zone Selection
+
 - **AI Semantic Segmentation**: Automated detection for **Subject**, **Sky**, **Skin / Face**, **Background**, and **Foreground**.
 - **AI Auto-Balance**: Analyzes zone telemetry to automatically direct regional light, contrast, and color balance (e.g. recovering sky clouds, gently lifting shadowed subjects, and smoothing portraits while keeping backgrounds balanced).
 - **Manual Zone Selection**:
@@ -80,7 +86,9 @@ The system integrates `Qwen3-VL-4B-Instruct Q4_K_M` running locally on GPU via `
 An automatic supervisor (`ensure_server()`) continuously checks model availability on `http://127.0.0.1:8081/v1`.
 
 ### Numerical Contract & Safety Guardrails
+
 The model receives a downscaled image preview, photographic telemetry (luminance, white clipping, color cast, and skin tone detection), and the base recipe. It responds with a structured JSON proposal bounded by strict limits (`LIMITS` in `studio/recipes.py`):
+
 - All proposed adjustments are clamped to safe photography ranges.
 - Geometry and framing are preserved; modules modifying perspective or crop are prohibited.
 - Module parameters are strictly validated before dispatching to darktable over JSON-RPC.
@@ -103,6 +111,7 @@ python ./scripts/evaluate-model.py --profile 09_PORTRA_WARM
 ```
 
 The script benchmarks three parallel stages (Fixed Profile, Algorithmic Adaptation, and Qwen3-VL Model), measuring:
+
 - Highlight blowout rate (white clipping > 99.5%).
 - Shadow crushing rate (black clipping < 0.5%).
 - Effective dynamic range (EV).
@@ -145,4 +154,5 @@ Tests verify the local model supervisor, photographic adaptation engine, library
 This project is licensed under the MIT License - see the [LICENSE](file:///d:/FOTOS/revelado-local/LICENSE) file for details.
 
 ---
+
 See [CHANGELOG.md](file:///d:/FOTOS/revelado-local/CHANGELOG.md) for version history and updates.
